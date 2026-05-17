@@ -84,13 +84,16 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange }: Props)
   }, [progressSeconds, baseDuration]);
 
   const resumeHref = useMemo(() => {
-    if (!item.link) return "#";
-    if (!progressSeconds || completed) return item.link;
-    const base = item.link;
+    const fallback = item.id
+      ? `https://www.youtube.com/watch?v=${encodeURIComponent(item.id)}`
+      : null;
+    const base = item.link || fallback;
+    if (!base) return null;
+    if (!progressSeconds || completed) return base;
     const sep = base.includes("?") ? "&" : "?";
     const t = Math.max(0, Math.floor(progressSeconds));
     return `${base}${sep}t=${t}s`;
-  }, [item.link, progressSeconds, completed]);
+  }, [item.id, item.link, progressSeconds, completed]);
 
   const durationLabel = useMemo(() => {
     if (!baseDuration || baseDuration <= 0) return null;
@@ -107,11 +110,12 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange }: Props)
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl bg-transparent px-3">
       <a
-        href={resumeHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex flex-1 flex-col"
+        href={resumeHref ?? undefined}
+        target={resumeHref ? "_blank" : undefined}
+        rel={resumeHref ? "noopener noreferrer" : undefined}
+        className={`flex flex-1 flex-col${!resumeHref ? " pointer-events-none" : ""}`}
         aria-label={`${item.sourceName} - ${item.title}`}
+        tabIndex={resumeHref ? undefined : -1}
       >
         <div className="relative w-full shrink-0 overflow-hidden bg-(--notion-gray)" style={{ aspectRatio: "16 / 9" }}>
           {item.thumbnail ? (
@@ -150,14 +154,14 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange }: Props)
             </span>
           )}
         </div>
-        <div className="flex flex-1 flex-col px-0 pb-1.5 pt-0 -mt-1">
-          <div className="min-h-10">
-            <h3 className="line-clamp-2 text-[11px] font-medium leading-snug tracking-tight text-(--notion-fg) group-hover:text-(--notion-fg)/90">
+        <div className="flex flex-1 flex-col gap-0.5 px-0 pb-1.5 pt-0.5">
+          <div className="min-h-[2.5rem] sm:min-h-[2.75rem]">
+            <h3 className="line-clamp-2 text-xs font-medium leading-snug tracking-tight text-(--notion-fg) group-hover:text-(--notion-fg)/90 sm:text-sm">
               {item.title}
             </h3>
           </div>
 
-          <div className="mt-0.5 flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <div className="flex min-w-0 shrink items-center gap-2">
               {item.sourceAvatarUrl ? (
                 <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-(--notion-gray)">
@@ -171,24 +175,24 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange }: Props)
                 </div>
               ) : (
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-(--notion-gray)">
-                  <span className="text-[11px] font-semibold text-(--notion-fg)/80">
+                  <span className="text-xs font-semibold text-(--notion-fg)/80 sm:text-[13px]">
                     {item.sourceName.charAt(0)}
                   </span>
                 </div>
               )}
-              <p className="min-w-0 truncate text-[11px] font-medium text-(--notion-fg)/75">
+              <p className="min-w-0 truncate text-xs font-medium text-(--notion-fg)/75 sm:text-[13px]">
                 {item.sourceName}
               </p>
             </div>
           </div>
 
-          <p className="mt-0.5 text-[10px] text-(--notion-fg)/55" suppressHydrationWarning>
+          <p className="text-[11px] text-(--notion-fg)/55 sm:text-xs" suppressHydrationWarning>
             {formLabel ? `${formLabel} · ${timeAgo}` : timeAgo}
           </p>
         </div>
       </a>
       {item.id && (
-        <div className="flex shrink-0 items-center justify-end gap-0.5 px-0 pb-1 pt-0.5">
+        <div className="flex shrink-0 items-center justify-end gap-1 px-0 pb-1 pt-0.5">
           {onBookmarkChange && (
             <BookmarkButton
               videoId={item.id}
@@ -199,30 +203,28 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange }: Props)
             />
           )}
           <AddToRadioButton videoId={item.id} title={item.title} />
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-(--notion-fg)/60 hover:bg-(--notion-hover) hover:text-(--notion-fg) touch-manipulation"
+            aria-label="더보기"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
         </div>
       )}
       {item.id && (
         <div
-          className="px-0 pb-1.5 pt-0.5"
+          className="px-0 pb-1.5"
           onClick={(e) => e.preventDefault()}
         >
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-(--notion-fg)/60 hover:bg-(--notion-hover) hover:text-(--notion-fg)"
-              aria-label="AI 도구 열기"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </div>
+          <SummarizeButton videoId={item.id} />
           {menuOpen && (
-            <div className="mt-1 rounded-xl border border-(--notion-border) bg-(--notion-bg) px-2.5 py-2 text-[11px] text-(--notion-fg) shadow-sm">
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-(--notion-fg)/55">
+            <div className="mt-1.5 rounded-xl border border-(--notion-border) bg-(--notion-bg) px-2.5 py-2 text-xs text-(--notion-fg) shadow-sm">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-(--notion-fg)/55 sm:text-xs">
                 AI 도구
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <SummarizeButton videoId={item.id} />
                 <InsightButton videoId={item.id} completed={completed} />
               </div>
             </div>

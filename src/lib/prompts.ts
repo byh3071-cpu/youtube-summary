@@ -141,3 +141,22 @@ ${itemsPayload.join("\n")}
   ]
 }
 `;
+
+/** 피드 Q&A: 병합 피드 일부를 컨텍스트로 질의. priorDialog는 직전 대화 요약(피드 원문이 우선). */
+export const getFeedQAPrompt = (contentLines: string[], question: string, priorDialog = "") => `
+너는 기술·비즈니스 뉴스 피드를 돕는 어시스턴트다.
+
+아래 각 줄은 탭으로 구분된 필드다: ISO날짜, 소스명, 제목, 요약/설명 발췌(없으면 빈칸).
+
+피드 항목:
+${contentLines.join("\n")}
+${priorDialog.trim() ? `\n이전 대화 참고(아래 피드 항목과 모순되면 반드시 피드 항목을 따른다):\n${priorDialog.trim()}\n` : ""}
+사용자 질문(한국어):
+${question}
+
+규칙:
+- 위 피드에 근거해 답하라. 목록에 없는 사실을 만들지 마라.
+- 목록과 직접 관련 없으면 한두 문장으로 "이 피드 범위에서는 관련 항목을 찾지 못했다"고 답하라.
+- 마크다운·목록 기호 없이 짧은 문단으로 답하라(800자 이내).
+`;
+

@@ -24,7 +24,13 @@ export function getCustomSourcesFromCookie(cookieValue: string | undefined): Fee
 }
 
 export function buildCustomSourcesCookie(sources: FeedSource[]): string {
-  const value = encodeURIComponent(JSON.stringify(sources));
+  const compactSources = sources.map(({ id, name, type, category }) => ({
+    id,
+    name,
+    type,
+    category,
+  }));
+  const value = encodeURIComponent(JSON.stringify(compactSources));
   return `${CUSTOM_SOURCES_COOKIE_NAME}=${value}; path=/; max-age=${CUSTOM_SOURCES_MAX_AGE}; SameSite=Lax`;
 }
 
@@ -43,7 +49,6 @@ export function mergeCustomSources(existing: FeedSource[], incoming: FeedSource[
  */
 export async function syncCustomSourcesWithDb(
   cookieSources: FeedSource[],
-  userId: string,
 ): Promise<{ merged: FeedSource[]; changed: boolean }> {
   try {
     const res = await fetch("/api/custom-sources");

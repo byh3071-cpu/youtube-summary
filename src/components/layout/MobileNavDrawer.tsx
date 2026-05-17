@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
-import { X, Bookmark, ListMusic, Film, Clapperboard, Radio } from "lucide-react";
+import { useSearchParams, usePathname } from "next/navigation";
+import { X, Bookmark, ListMusic, Film, Clapperboard, Radio, TrendingUp } from "lucide-react";
 import { ModalTransition } from "@/components/ui/ModalTransition";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { defaultSources, FEED_CATEGORIES } from "@/lib/sources";
@@ -43,6 +43,7 @@ export default function MobileNavDrawer({
 }) {
   const ytSources = youtubeSources ?? defaultSources.filter((s) => s.type === "YouTube");
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const viewMode = searchParams?.get("viewMode") ?? null;
 
   useEffect(() => {
@@ -76,7 +77,7 @@ export default function MobileNavDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center rounded-full text-(--notion-fg)/60 hover:bg-(--notion-hover) hover:text-(--notion-fg) min-h-[36px] min-w-[36px] touch-manipulation"
+              className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-full text-(--notion-fg)/60 hover:bg-(--notion-hover) hover:text-(--notion-fg) min-h-[44px] min-w-[44px] touch-manipulation"
               aria-label="메뉴 닫기"
             >
               <X size={20} />
@@ -93,9 +94,17 @@ export default function MobileNavDrawer({
                 />
               </div>
               <Link
+                href="/trends"
+                onClick={onClose}
+                className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${pathname === "/trends" ? "bg-(--notion-hover) text-(--notion-fg)" : "text-(--notion-fg)/80 hover:bg-(--notion-hover)"}`}
+              >
+                <TrendingUp size={16} className="shrink-0" />
+                트렌드 대시보드
+              </Link>
+              <Link
                 href="/"
                 onClick={onClose}
-                className={`block w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors ${!selectedSourceId && !selectedCategory ? "bg-(--notion-hover) text-(--notion-fg)" : "text-(--notion-fg)/80 hover:bg-(--notion-hover)"}`}
+                className={`block w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors ${pathname === "/" && !selectedSourceId && !selectedCategory && !viewMode ? "bg-(--notion-hover) text-(--notion-fg)" : "text-(--notion-fg)/80 hover:bg-(--notion-hover)"}`}
               >
                 전체 피드
               </Link>

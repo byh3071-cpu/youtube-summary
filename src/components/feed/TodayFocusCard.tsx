@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { FeedItem } from "@/types/feed";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
+import { loadVideoSummary } from "@/lib/focus-feed-storage";
 
 export interface TodayFocusEntry {
   item: FeedItem;
@@ -35,10 +36,7 @@ export default function TodayFocusCard({ entry }: Props) {
       return;
     }
 
-    const summary =
-      typeof window !== "undefined"
-        ? localStorage.getItem(`summary_${videoId}`) ?? undefined
-        : undefined;
+    const summary = loadVideoSummary(videoId);
 
     radio.addToQueue({
       videoId,

@@ -42,17 +42,16 @@ export default function FeedHeader({
       ? "/images/hero/hero-illustration_dark4.png"
       : "/images/hero/hero-illustration3.png";
 
-  // [채널명 위치 조정] 소스 선택 시(일잘러 장피엠 등) 문구 위치:
-  // - 섹션 상단: 아래 HEADER_SOURCE_* 값으로 조정 (위로 올리려면 음수 -mt-1 등, 아래로는 pt-2 등)
-  // - 채널명(h1)만: 아래 CHANNEL_TITLE_* 값으로 조정 (위로: -mt-1, 아래로: mt-1 등)
-  const HEADER_SOURCE_TOP = "pt-2 sm:pt-3"; // 섹션 상단 여백 (pt-0 = 없음, pt-4 = 더 아래)
-  const CHANNEL_TITLE_TOP = "-mt-6 sm:-mt-9"; // 채널명 블록 위아래 (위로: -mt-2 ~ -mt-8, 아래로: mt-1) — 상위 div에 적용돼야 더 올라감
-  const REFRESH_BLOCK_TOP = "mt-3 sm:mt-4"; // 새로고침(오른쪽 블록)만 아래로 (mt-0 = 유지, mt-2 ~ mt-4 = 더 내림)
-
   return (
-    <section className={`${selectedSource ? `mb-0 border-0 rounded-none bg-white dark:bg-(--notion-bg) ${HEADER_SOURCE_TOP} pb-5 px-4 sm:pb-7 sm:px-6` : "mb-4 rounded-3xl border border-(--notion-border) bg-linear-to-b from-(--notion-bg) to-(--notion-gray) p-5 sm:mb-5 sm:p-7"}`}>
+    <section
+      className={
+        selectedSource
+          ? "mb-0 border-0 rounded-none bg-white dark:bg-(--notion-bg) px-4 py-4 sm:px-6 sm:py-5"
+          : "mb-4 rounded-3xl border border-(--notion-border) bg-linear-to-b from-(--notion-bg) to-(--notion-gray) p-5 sm:mb-5 sm:p-7"
+      }
+    >
       <div className={`flex ${selectedSource ? "flex-row items-center justify-between gap-4" : "flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"}`}>
-        <div className={`min-w-0 ${selectedSource ? CHANNEL_TITLE_TOP : ""}`}>
+        <div className="min-w-0">
           {selectedSource ? (
             <h1 className="mb-0 text-xl font-bold tracking-tight sm:text-2xl">
               <span className="truncate">{selectedSource.name}</span>
@@ -95,7 +94,7 @@ export default function FeedHeader({
           )}
         </div>
 
-        <div className={`flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center ${selectedSource ? `flex-row items-center ${REFRESH_BLOCK_TOP}` : ""}`}>
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <ConnectionStatusPopup selectedSource={selectedSource} sourceStatus={sourceStatus} />
           <RefreshButton />
         </div>

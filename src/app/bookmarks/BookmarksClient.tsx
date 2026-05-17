@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { Bookmark, Trash2, ExternalLink, Headphones, Rss } from "lucide-react";
+import { Trash2, ExternalLink, Headphones, Rss } from "lucide-react";
 import type { BookmarkRow } from "@/lib/supabase-server-cookies";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import { useIsHydrated } from "@/lib/use-is-hydrated";

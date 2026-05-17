@@ -18,6 +18,14 @@ function getSortTimestamp(pubDate: string): number {
     return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
+/** 병합 후 최대 노출 개수(메모리·응답 크기). `MAX_MERGED_FEED_ITEMS`로 50~2000 조정 가능. */
+function getMergedFeedItemCap(): number {
+    const raw = process.env.MAX_MERGED_FEED_ITEMS;
+    const n = raw ? Number.parseInt(raw, 10) : NaN;
+    if (!Number.isFinite(n)) return 500;
+    return Math.min(2000, Math.max(50, n));
+}
+
 function dedupeItems(items: FeedItem[]): FeedItem[] {
     const seen = new Set<string>();
 
@@ -109,8 +117,11 @@ export async function getMergedFeed(sources: FeedSource[] = defaultSources): Pro
             return getSortTimestamp(b.pubDate) - getSortTimestamp(a.pubDate);
         });
 
+        const cap = getMergedFeedItemCap();
+        const capped = uniqueItems.length > cap ? uniqueItems.slice(0, cap) : uniqueItems;
+
         return {
-            items: uniqueItems,
+            items: capped,
             sourceStatus: {
                 youtube: youtubeStatus,
                 rss: "ready",

@@ -45,16 +45,21 @@ export default function InsightButton({ videoId, completed }: Props) {
     setLoading(true);
     setError(null);
 
-    const result = await summarizeInsightAction(videoId);
+    try {
+      const result = await summarizeInsightAction(videoId);
 
-    if (result.error) {
-      setError(result.error);
-    } else if (result.insight) {
-      setInsight(result.insight);
-      localStorage.setItem(`insight_${videoId}`, result.insight);
+      if (result.error) {
+        setError(result.error);
+      } else if (result.insight) {
+        setInsight(result.insight);
+        localStorage.setItem(`insight_${videoId}`, result.insight);
+        window.dispatchEvent(new Event("focus-feed:usage-updated"));
+      }
+    } catch {
+      setError("인사이트 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -102,4 +107,3 @@ export default function InsightButton({ videoId, completed }: Props) {
     </div>
   );
 }
-

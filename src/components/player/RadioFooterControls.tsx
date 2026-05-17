@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import { qaLog } from "@/lib/qa-log";
-import { ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause } from "lucide-react";
 import { ThemeIcon } from "@/components/ui/ThemeIcon";
 
 interface RadioFooterControlsProps {
@@ -89,7 +89,7 @@ export function RadioFooterControls({
 
   const btnBase = "flex shrink-0 items-center justify-center rounded-full bg-white/80 text-(--notion-fg)/70 ring-1 ring-black/15 shadow-[0_1px_4px_rgba(0,0,0,0.08)] transition-colors hover:bg-(--notion-hover) hover:text-(--notion-fg) touch-manipulation dark:bg-black/40 dark:ring-white/20 dark:shadow-[0_1px_4px_rgba(0,0,0,0.3)] dark:hover:bg-black/60";
   const btnMobile = "h-11 w-11 min-h-[44px] min-w-[44px] sm:h-12 sm:w-12 sm:min-h-[48px] sm:min-w-[48px] md:h-16 md:w-16 md:min-h-[64px] md:min-w-[64px]";
-  const btnNav = "h-9 w-9 min-h-[36px] min-w-[36px] sm:h-10 sm:w-10 md:h-10 md:w-10 md:min-h-[44px] md:min-w-[44px]";
+  const btnNav = "h-11 w-11 min-h-[44px] min-w-[44px] sm:h-12 sm:w-12 md:h-12 md:w-12";
 
   return (
     <footer

@@ -6,6 +6,7 @@ import { ExternalLink, ChevronDown } from "lucide-react";
 import type { FeedItem } from "@/types/feed";
 import AddToRadioButton from "./AddToRadioButton";
 import BookmarkButton from "./BookmarkButton";
+import ReelContextBar from "./ReelContextBar";
 import type { BookmarkEntry } from "./FeedClientContainer";
 
 const RSS_BOOKMARK_PREFIX = "rss:";
@@ -101,12 +102,11 @@ function ReelSlide({
   return (
     <section
       ref={sectionRef}
-      className="relative flex h-[100dvh] w-full shrink-0 snap-start snap-always flex-col items-center justify-start bg-black px-0 py-0"
+      className="relative flex h-full min-h-0 w-full shrink-0 snap-start snap-always flex-col items-center justify-start bg-black px-0 py-0"
       aria-label={`${index + 1} / ${total}`}
     >
-      <div className="flex h-full w-full flex-col">
-        {/* 플레이어: 버튼 바·라디오 플레이어와 살짝 간격 두기 위해 영상 화면만 조금 더 줄임 (7.5rem) */}
-        <div className="relative flex min-h-0 w-full flex-1 items-stretch justify-center bg-black max-h-[calc(100dvh-1rem)]">
+      <div className="flex h-full min-h-0 w-full flex-col">
+        <div className="relative flex min-h-0 w-full flex-1 items-stretch justify-center bg-black">
           <div className="relative h-full w-full max-w-6xl">
             {videoId && ytReady ? (
               <div
@@ -210,12 +210,15 @@ function ReelSlide({
 
 export default function FeedReelView({ items, viewMode, bookmarks = [], onBookmarkChange }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [ytReady, setYtReady] = useState(false);
+  const [ytReady, setYtReady] = useState(() =>
+    typeof window !== "undefined" ? !!window.YT?.Player : false,
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (ytReady) return;
     if (window.YT?.Player) {
-      setYtReady(true);
+      queueMicrotask(() => setYtReady(true));
       return;
     }
     const tag = document.createElement("script");
@@ -230,7 +233,7 @@ export default function FeedReelView({ items, viewMode, bookmarks = [], onBookma
     return () => {
       window.onYouTubeIframeAPIReady = prev;
     };
-  }, []);
+  }, [ytReady]);
 
   const scrollToNext = useCallback((currentIndex: number) => {
     const nextIndex = currentIndex + 1;
@@ -249,23 +252,28 @@ export default function FeedReelView({ items, viewMode, bookmarks = [], onBookma
           ? "60초 이하 숏폼"
           : "61초 이상 롱폼";
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-2xl border border-dashed border-(--notion-border) py-16 text-center">
-        <p className="text-(--notion-fg)/70">{emptyLabel} 영상이 없습니다.</p>
-        <p className="mt-1 text-sm text-(--notion-fg)/50">
-          {viewMode === "live"
-            ? "연결된 채널 중 현재 라이브 중인 영상이 없습니다."
-            : "유튜브 피드에 재생 시간 정보가 있으면 여기에서 구분해 표시합니다."}
-        </p>
+      <div className="flex h-[100dvh] min-h-0 w-full flex-col">
+        <ReelContextBar viewMode={viewMode} />
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-(--notion-border) px-4 py-16 text-center">
+          <p className="text-(--notion-fg)/70">{emptyLabel} 영상이 없습니다.</p>
+          <p className="mt-1 text-sm text-(--notion-fg)/50">
+            {viewMode === "live"
+              ? "연결된 채널 중 현재 라이브 중인 영상이 없습니다."
+              : "유튜브 피드에 재생 시간 정보가 있으면 여기에서 구분해 표시합니다."}
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="flex h-[100dvh] w-full flex-col overflow-y-auto overscroll-y-contain snap-y snap-mandatory"
-      style={{ scrollBehavior: "smooth" }}
-    >
+    <div className="flex h-[100dvh] min-h-0 w-full flex-col">
+      <ReelContextBar viewMode={viewMode} />
+      <div
+        ref={containerRef}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain snap-y snap-mandatory"
+        style={{ scrollBehavior: "smooth" }}
+      >
       {items.map((item, index) => {
         const bookmark = item.source === "RSS"
           ? bookmarks.find((b) => b.video_id === RSS_BOOKMARK_PREFIX + item.link)
@@ -286,6 +294,7 @@ export default function FeedReelView({ items, viewMode, bookmarks = [], onBookma
           />
         );
       })}
+      </div>
     </div>
   );
 }

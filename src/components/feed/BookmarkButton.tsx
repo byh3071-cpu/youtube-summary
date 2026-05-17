@@ -91,7 +91,7 @@ export default function BookmarkButton({
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className={`inline-flex items-center justify-center rounded-full transition-colors ${className ?? "h-7 w-7"} ${
+      className={`inline-flex items-center justify-center rounded-full transition-colors touch-manipulation ${className ?? "h-11 w-11 min-h-[44px] min-w-[44px]"} ${
         optimisticBookmarked
           ? "text-amber-500 hover:bg-amber-500/10 hover:text-amber-600"
           : "text-(--notion-fg)/50 hover:bg-(--notion-hover) hover:text-(--notion-fg)/70"

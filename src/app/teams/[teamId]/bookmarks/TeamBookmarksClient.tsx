@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Bookmark, ExternalLink, Trash2 } from "lucide-react";
 
@@ -34,18 +34,18 @@ export default function TeamBookmarksClient({ teamId }: { teamId: string }) {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     const res = await fetch(`/api/bookmarks?team_id=${encodeURIComponent(teamId)}`);
     if (res.ok) {
       const data = await res.json();
       setList(Array.isArray(data) ? data : []);
     }
     setLoading(false);
-  };
+  }, [teamId]);
 
   useEffect(() => {
     fetchList();
-  }, [teamId]);
+  }, [fetchList]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();

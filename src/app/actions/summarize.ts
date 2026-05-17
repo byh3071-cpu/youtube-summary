@@ -18,6 +18,7 @@ import {
   getRankingPrompt,
 } from "@/lib/prompts";
 import { checkUsageLimit, incrementUsage } from "@/lib/plan";
+import { guardGeminiActionRateLimit } from "@/lib/gemini-rate-limit";
 
 /** 품질 기준 점수 이상이면 통과 (요약·인사이트 공통, 강화된 기준) */
 const QUALITY_THRESHOLD = 78;
@@ -125,6 +126,11 @@ export async function summarizeVideoAction(videoId: string) {
     return { error: ".env.local 파일에 GEMINI_API_KEY 설정이 필요합니다." };
   }
 
+  const burst = await guardGeminiActionRateLimit("summary");
+  if (!burst.ok) {
+    return { error: burst.error };
+  }
+
   const cookieStore = await cookies();
   const limitResult = await checkUsageLimit(cookieStore, "summary");
   if (!limitResult.allowed) {
@@ -208,6 +214,11 @@ export async function summarizeVideoAction(videoId: string) {
 export async function summarizeInsightAction(videoId: string) {
   if (!process.env.GEMINI_API_KEY) {
     return { error: ".env.local 파일에 GEMINI_API_KEY 설정이 필요합니다." };
+  }
+
+  const burst = await guardGeminiActionRateLimit("insight");
+  if (!burst.ok) {
+    return { error: burst.error };
   }
 
   const cookieStore = await cookies();
@@ -304,6 +315,11 @@ export async function rankFeedByGoalsAction(goals: string, limit: number = 20) {
   const goalText = goals.trim();
   if (!goalText) {
     return { error: "먼저 상단의 My Focus 영역에 목표/관심사를 입력해 주세요." };
+  }
+
+  const burst = await guardGeminiActionRateLimit("briefing");
+  if (!burst.ok) {
+    return { error: burst.error };
   }
 
   const cookieStore = await cookies();

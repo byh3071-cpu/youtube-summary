@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
@@ -42,21 +42,20 @@ export default function YouTubeSourceList({
   const router = useRouter();
   const customSet = new Set(customSourceIds);
   const [now] = useState(() => Date.now());
-  const [lastSeen, setLastSeen] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const [lastSeen, setLastSeen] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
     try {
       const raw = window.localStorage.getItem(LAST_SEEN_SOURCE_KEY);
-      if (!raw) return;
+      if (!raw) return {};
       const parsed = JSON.parse(raw) as Record<string, string>;
       if (parsed && typeof parsed === "object") {
-        setLastSeen(parsed);
+        return parsed;
       }
     } catch {
       // ignore localStorage parse errors
     }
-  }, []);
+    return {};
+  });
 
   const markSourceSeen = (sourceId: string, latest?: string) => {
     if (!latest) return;
@@ -79,8 +78,6 @@ export default function YouTubeSourceList({
     const raw = getCookie(CUSTOM_SOURCES_COOKIE_NAME);
     const list = getCustomSourcesFromCookie(raw);
     const next = list.filter((s) => s.id !== sourceId);
-    // 이벤트 핸들러 내부에서의 의도적 side effect (렌더 중이 아님)
-    // eslint-disable-next-line react-hooks/immutability -- event handler
     document.cookie = buildCustomSourcesCookie(next);
     fetch(`/api/custom-sources?sourceId=${encodeURIComponent(sourceId)}`, { method: "DELETE" }).catch(
       () => {}
@@ -139,7 +136,7 @@ export default function YouTubeSourceList({
               <button
                 type="button"
                 onClick={(e) => handleRemove(e, item.id)}
-                className="shrink-0 rounded p-1 text-(--notion-fg)/40 hover:bg-(--notion-gray) hover:text-red-600"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-(--notion-fg)/40 hover:bg-(--notion-gray) hover:text-red-600 min-h-[44px] min-w-[44px] touch-manipulation"
                 aria-label={`${item.name} 채널 목록에서 제거`}
               >
                 <Trash2 size={14} />

@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const allowProd =
+    process.env.ENABLE_DEBUG_YOUTUBE === "true" || process.env.ENABLE_DEBUG_YOUTUBE === "1";
+  if (process.env.NODE_ENV === "production" && !allowProd) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const apiKey = process.env.YOUTUBE_API_KEY;
 
   if (!apiKey || apiKey.trim() === "" || apiKey.trim() === "your_youtube_api_key_here") {
@@ -21,8 +27,7 @@ export async function GET() {
     return NextResponse.json({
       httpStatus: res.status,
       ok: res.ok,
-      keyPrefix: apiKey.slice(0, 8) + "...",
-      response: body.slice(0, 800),
+      responsePreview: body.slice(0, 800),
     });
   } catch (err) {
     return NextResponse.json({ status: "network_error", error: String(err) }, { status: 500 });

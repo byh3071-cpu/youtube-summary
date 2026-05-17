@@ -3,26 +3,97 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { loadGoals, saveGoals } from "@/lib/goals";
+import {
+  loadVideoSummary,
+  loadBriefingCache,
+  saveBriefingCache,
+  clearBriefingCache,
+  wasVideoNotionPushed,
+  markVideoNotionPushed,
+  loadVideoNotionInfo,
+} from "@/lib/focus-feed-storage";
 import { rankFeedByGoalsAction } from "@/app/actions/summarize";
+import { syncVideoToNotionAction } from "@/app/actions/notion-sync";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import type { TodayFocusEntry } from "./TodayFocusCard";
 
+type NotionSyncState =
+  | { state: "idle" }
+  | { state: "syncing" }
+  | { state: "done"; summaryUrl?: string }
+  | { state: "error"; message: string };
+
 type AiRankedRecommendation = TodayFocusEntry;
+type BriefingResult =
+  | { ranked: AiRankedRecommendation[] }
+  | { error: string }
+  | undefined;
+
+const BRIEFING_TOP_N = 3;
+const GOALS_PREVIEW_LIMIT = 140;
+const SAVED_FLASH_MS = 1500;
+
+function isRankedResult(
+  result: BriefingResult,
+): result is { ranked: AiRankedRecommendation[] } {
+  return !!result && "ranked" in result && Array.isArray(result.ranked);
+}
+
+function isErrorResult(result: BriefingResult): result is { error: string } {
+  return (
+    !!result &&
+    "error" in result &&
+    typeof result.error === "string" &&
+    result.error.length > 0
+  );
+}
 
 export default function MyFocusSection() {
   const radio = useRadioQueueOptional();
+  const [hydrated, setHydrated] = useState(false);
   const [goals, setGoals] = useState("");
   const [goalsTouched, setGoalsTouched] = useState(false);
+  const [showSavedFlash, setShowSavedFlash] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiBriefing, setAiBriefing] = useState<AiRankedRecommendation[] | null>(null);
   const [focusExpanded, setFocusExpanded] = useState(false);
+  const [goalsPreviewExpanded, setGoalsPreviewExpanded] = useState(false);
+  const [notionSync, setNotionSync] = useState<Record<string, NotionSyncState>>({});
   const briefingRequestId = useRef(0);
+  const mountedRef = useRef(true);
+  const savedFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSyncedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    mountedRef.current = true;
     const stored = loadGoals();
     setGoals(stored);
     setFocusExpanded(!stored.trim());
+    const cached = loadBriefingCache<AiRankedRecommendation[]>(stored);
+    if (cached && cached.length > 0) {
+      setAiBriefing(cached);
+      const hydratedStatus: Record<string, NotionSyncState> = {};
+      for (const entry of cached) {
+        const vid = entry.item.id;
+        if (!vid) continue;
+        const info = loadVideoNotionInfo(vid);
+        if (info) {
+          hydratedStatus[vid] = { state: "done", summaryUrl: info.summaryUrl };
+          autoSyncedRef.current.add(vid);
+        }
+      }
+      if (Object.keys(hydratedStatus).length > 0) {
+        setNotionSync(hydratedStatus);
+      }
+    }
+    setHydrated(true);
+    return () => {
+      mountedRef.current = false;
+      if (savedFlashTimerRef.current) {
+        clearTimeout(savedFlashTimerRef.current);
+      }
+    };
   }, []);
 
   const handlePlayFromBriefing = useCallback(
@@ -41,10 +112,7 @@ export default function MyFocusSection() {
         return;
       }
 
-      const summary =
-        typeof window !== "undefined"
-          ? localStorage.getItem(`summary_${videoId}`) ?? undefined
-          : undefined;
+      const summary = loadVideoSummary(videoId);
 
       radio.addToQueue({
         videoId,
@@ -59,47 +127,166 @@ export default function MyFocusSection() {
     [radio],
   );
 
-  const handleRunAiBriefing = async () => {
-    const currentId = ++briefingRequestId.current;
-    setAiError(null);
-    setAiLoading(true);
-    try {
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 30000)
-      );
-      const result = await Promise.race([rankFeedByGoalsAction(goals), timeout]);
-      if (currentId !== briefingRequestId.current) return;
-      if (!result) {
-        setAiError("AI 브리핑 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-        setAiBriefing(null);
+  const handlePushToNotion = useCallback(
+    async (entry: AiRankedRecommendation, opts: { auto?: boolean } = {}) => {
+      const videoId = entry.item.id;
+      if (!videoId || entry.item.source !== "YouTube") return;
+      const current = notionSync[videoId];
+      if (current?.state === "syncing") return;
+      if (opts.auto && (current?.state === "done" || wasVideoNotionPushed(videoId))) {
         return;
       }
-      if ("error" in result && result.error) {
-        setAiError(result.error);
-        setAiBriefing(null);
-        return;
+
+      setNotionSync((prev) => ({ ...prev, [videoId]: { state: "syncing" } }));
+
+      try {
+        const result = await syncVideoToNotionAction({
+          videoId,
+          title: entry.item.title,
+          channel: entry.item.sourceName ?? null,
+          durationMinutes:
+            entry.item.durationSeconds != null
+              ? entry.item.durationSeconds / 60
+              : null,
+          hint: {
+            priority: entry.priority,
+            score: entry.score,
+            why: entry.why,
+            action: entry.action,
+          },
+        });
+
+        if (!mountedRef.current) return;
+
+        if ("error" in result) {
+          setNotionSync((prev) => ({
+            ...prev,
+            [videoId]: { state: "error", message: result.error },
+          }));
+          return;
+        }
+        const summaryUrl = "summaryUrl" in result ? result.summaryUrl : undefined;
+        setNotionSync((prev) => ({
+          ...prev,
+          [videoId]: { state: "done", summaryUrl },
+        }));
+        if (summaryUrl) markVideoNotionPushed(videoId, summaryUrl);
+      } catch (error) {
+        if (!mountedRef.current) return;
+        console.error("syncVideoToNotion error:", error);
+        setNotionSync((prev) => ({
+          ...prev,
+          [videoId]: {
+            state: "error",
+            message: "노션 동기화 중 오류가 발생했습니다.",
+          },
+        }));
       }
-      if ("ranked" in result && Array.isArray(result.ranked) && result.ranked.length > 0) {
-        setAiBriefing(result.ranked.slice(0, 3) as AiRankedRecommendation[]);
-      } else {
-        setAiError("사용자 목표/관심사와 잘 맞는 추천을 찾지 못했습니다.");
-        setAiBriefing(null);
-      }
-    } catch (error) {
-      if (currentId !== briefingRequestId.current) return;
-      const isTimeout = error instanceof Error && error.message === "timeout";
-      console.error("AI Morning Briefing 호출 오류:", error);
-      setAiError(isTimeout
-        ? "AI 브리핑이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
-        : "AI 브리핑 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
-      );
-      setAiBriefing(null);
-    } finally {
-      if (currentId === briefingRequestId.current) {
-        setAiLoading(false);
-      }
+    },
+    [notionSync],
+  );
+
+  const radioPlayback = radio?.playback;
+  useEffect(() => {
+    if (!radioPlayback?.completed) return;
+    const completedId = radioPlayback.videoId;
+    if (!completedId || autoSyncedRef.current.has(completedId)) return;
+    if (!aiBriefing) return;
+    const entry = aiBriefing.find((e) => e.item.id === completedId);
+    if (!entry) return;
+    if (wasVideoNotionPushed(completedId)) {
+      autoSyncedRef.current.add(completedId);
+      return;
     }
-  };
+    autoSyncedRef.current.add(completedId);
+    void handlePushToNotion(entry, { auto: true });
+  }, [radioPlayback?.completed, radioPlayback?.videoId, aiBriefing, handlePushToNotion]);
+
+  const runBriefing = useCallback(
+    async ({ forceFresh }: { forceFresh: boolean }) => {
+      const trimmed = goals.trim();
+      if (!trimmed) return;
+
+      if (!forceFresh) {
+        const cached = loadBriefingCache<AiRankedRecommendation[]>(trimmed);
+        if (cached && cached.length > 0) {
+          setAiBriefing(cached);
+          setAiError(null);
+          return;
+        }
+      } else {
+        clearBriefingCache(trimmed);
+      }
+
+      const currentId = ++briefingRequestId.current;
+      setAiError(null);
+      setAiLoading(true);
+
+      try {
+        const result = (await rankFeedByGoalsAction(trimmed)) as BriefingResult;
+
+        if (!mountedRef.current || currentId !== briefingRequestId.current) return;
+
+        if (!result) {
+          setAiError("AI 브리핑 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+          setAiBriefing(null);
+          return;
+        }
+        if (isErrorResult(result)) {
+          setAiError(result.error);
+          setAiBriefing(null);
+          return;
+        }
+        if (isRankedResult(result) && result.ranked.length > 0) {
+          const topN = result.ranked.slice(0, BRIEFING_TOP_N);
+          setAiBriefing(topN);
+          saveBriefingCache(trimmed, topN);
+          window.dispatchEvent(new Event("focus-feed:usage-updated"));
+        } else {
+          setAiError("사용자 목표/관심사와 잘 맞는 추천을 찾지 못했습니다.");
+          setAiBriefing(null);
+        }
+      } catch (error) {
+        if (!mountedRef.current || currentId !== briefingRequestId.current) return;
+        console.error("AI Morning Briefing 호출 오류:", error);
+        setAiError("AI 브리핑 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        setAiBriefing(null);
+      } finally {
+        if (mountedRef.current && currentId === briefingRequestId.current) {
+          setAiLoading(false);
+        }
+      }
+    },
+    [goals],
+  );
+
+  const handleRunAiBriefing = useCallback(() => {
+    void runBriefing({ forceFresh: false });
+  }, [runBriefing]);
+
+  const handleRegenerate = useCallback(() => {
+    void runBriefing({ forceFresh: true });
+  }, [runBriefing]);
+
+  const handleSaveGoals = useCallback(() => {
+    saveGoals(goals);
+    setGoalsTouched(false);
+    setShowSavedFlash(true);
+    if (savedFlashTimerRef.current) {
+      clearTimeout(savedFlashTimerRef.current);
+    }
+    savedFlashTimerRef.current = setTimeout(() => {
+      if (mountedRef.current) setShowSavedFlash(false);
+    }, SAVED_FLASH_MS);
+  }, [goals]);
+
+  const trimmedGoals = goals.trim();
+  const hasGoals = trimmedGoals.length > 0;
+  const goalsTooLong = trimmedGoals.length > GOALS_PREVIEW_LIMIT;
+  const goalsToShow =
+    !goalsTooLong || goalsPreviewExpanded
+      ? trimmedGoals
+      : `${trimmedGoals.slice(0, GOALS_PREVIEW_LIMIT)}…`;
 
   return (
     <section className="mb-3 rounded-2xl border border-(--notion-border) bg-(--notion-bg) px-4 py-3 text-sm sm:px-5 sm:py-3.5">
@@ -108,24 +295,36 @@ export default function MyFocusSection() {
           <p className="text-xs font-semibold uppercase tracking-wide text-(--notion-fg)/60">
             My Focus
           </p>
-          <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-(--notion-fg)/70 sm:text-[12px]">
-            {goals.trim()
-              ? goals
+          <p className="mt-1 whitespace-pre-wrap text-[11px] leading-snug text-(--notion-fg)/70 sm:text-[12px]">
+            {hasGoals
+              ? goalsToShow
               : "지금 가장 중요한 목표나 관심사를 한두 줄로 적어보세요."}
           </p>
+          {goalsTooLong && (
+            <button
+              type="button"
+              onClick={() => setGoalsPreviewExpanded((prev) => !prev)}
+              className="mt-0.5 text-[10px] font-semibold text-(--notion-fg)/55 hover:text-(--notion-fg)/80"
+            >
+              {goalsPreviewExpanded ? "접기" : "더 보기"}
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-(--notion-fg)/65">
-          <button
-            type="button"
-            onClick={() => setFocusExpanded((prev) => !prev)}
-            className="rounded-full border border-(--notion-border) px-2.5 py-1 font-semibold hover:bg-(--notion-hover)"
-          >
-            {focusExpanded ? "접기" : "편집"}
-          </button>
+          {hydrated && (
+            <button
+              type="button"
+              onClick={() => setFocusExpanded((prev) => !prev)}
+              className="rounded-full border border-(--notion-border) px-2.5 py-1 font-semibold hover:bg-(--notion-hover)"
+            >
+              {focusExpanded ? (hasGoals ? "접기" : "닫기") : "편집"}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleRunAiBriefing}
-            disabled={!goals.trim() || aiLoading}
+            disabled={!hasGoals || aiLoading}
+            aria-busy={aiLoading}
             className="rounded-full bg-(--notion-fg) px-3 py-1 text-[11px] font-semibold text-(--notion-bg) transition-colors hover:bg-(--notion-fg)/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {aiLoading ? "브리핑 중..." : "AI 브리핑"}
@@ -133,7 +332,7 @@ export default function MyFocusSection() {
         </div>
       </div>
 
-      {focusExpanded && (
+      {hydrated && focusExpanded && (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
           <label htmlFor="my-focus-goals" className="sr-only">
             MY FOCUS 관심사 입력
@@ -153,144 +352,173 @@ export default function MyFocusSection() {
           <div className="flex shrink-0 flex-col gap-2">
             <button
               type="button"
-              onClick={() => {
-                saveGoals(goals);
-                setGoalsTouched(false);
-              }}
+              onClick={handleSaveGoals}
               className="rounded-full bg-(--notion-fg) px-3 py-1.5 text-[11px] font-semibold text-(--notion-bg) transition-colors hover:bg-(--notion-fg)/90"
             >
-              {goalsTouched ? "관심사 저장" : "저장됨"}
+              {showSavedFlash ? "✓ 저장됨" : goalsTouched ? "관심사 저장" : "저장됨"}
             </button>
           </div>
         </div>
       )}
 
-      {aiLoading && !aiBriefing && (
-        <div className="mt-3 space-y-2 rounded-xl border border-(--notion-border) bg-(--notion-bg)/80 px-3 py-3" aria-live="polite">
-          <div className="flex items-center gap-2 text-[11px] text-(--notion-fg)/60">
-            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-(--notion-fg)/20 border-t-(--notion-fg)/60" />
-            <span>AI가 맞춤 브리핑을 준비하고 있습니다...</span>
-          </div>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex gap-3 animate-pulse rounded-lg bg-(--notion-gray)/30 px-3 py-2">
-              <div className="h-16 w-28 shrink-0 rounded-md bg-(--notion-gray)/50" />
-              <div className="flex-1 space-y-2 py-1">
-                <div className="h-3 w-3/4 rounded bg-(--notion-gray)/50" />
-                <div className="h-3 w-1/2 rounded bg-(--notion-gray)/50" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {((aiBriefing && aiBriefing.length > 0) || aiError) && !aiLoading ? (
-        <div className="mt-3 space-y-1.5 rounded-xl border border-(--notion-border) bg-(--notion-bg)/80 px-3 py-2.5 text-[12px]">
+      {((aiBriefing && aiBriefing.length > 0) || aiError) && (
+        <div
+          className={`relative mt-3 space-y-1.5 rounded-xl border border-(--notion-border) bg-(--notion-bg)/80 px-3 py-2.5 text-[12px] transition-opacity ${
+            aiLoading ? "opacity-50" : "opacity-100"
+          }`}
+          aria-busy={aiLoading}
+        >
           <div className="mb-1 flex items-center justify-between gap-2">
             <p className="text-[11px] font-semibold text-(--notion-fg)/75">
               오늘의 추천 콘텐츠
             </p>
-            {aiBriefing && (
-              <span className="text-[10px] text-(--notion-fg)/50">
-                상위 {aiBriefing.length}개 콘텐츠 기준
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {aiBriefing && (
+                <span className="text-[10px] text-(--notion-fg)/50">
+                  상위 {aiBriefing.length}개 콘텐츠 기준
+                </span>
+              )}
+              {aiBriefing && aiBriefing.length > 0 && hasGoals && (
+                <button
+                  type="button"
+                  onClick={handleRegenerate}
+                  disabled={aiLoading}
+                  className="rounded-full border border-(--notion-border) px-2 py-0.5 text-[10px] font-semibold text-(--notion-fg)/70 hover:bg-(--notion-hover) disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  다시 추천
+                </button>
+              )}
+            </div>
           </div>
 
           {aiError && (
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] leading-relaxed text-(--notion-fg)/65">
-                {aiError}
-              </p>
-              <button
-                type="button"
-                onClick={handleRunAiBriefing}
-                disabled={aiLoading}
-                className="shrink-0 rounded-full border border-(--notion-border) px-2.5 py-1 text-[10px] font-semibold text-(--notion-fg)/70 hover:bg-(--notion-hover)"
-              >
-                다시 시도
-              </button>
-            </div>
+            <p className="text-[11px] leading-relaxed text-(--notion-fg)/65">
+              {aiError}
+            </p>
           )}
 
           {aiBriefing && aiBriefing.length > 0 && (
             <ul className="space-y-2.5">
-              {aiBriefing.map((entry) => (
-                <li
-                  key={`${entry.item.source}:${entry.item.id}:${entry.priority}`}
-                  className="flex gap-3 rounded-lg bg-(--notion-gray)/40 px-3 py-2"
-                >
-                  <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-md bg-(--notion-gray)">
-                    {entry.item.thumbnail ? (
-                      <button
-                        type="button"
-                        onClick={() => handlePlayFromBriefing(entry)}
-                        className="group relative block h-full w-full text-left"
-                      >
-                        <Image
-                          src={entry.item.thumbnail}
-                          alt={entry.item.title}
-                          fill
-                          sizes="120px"
-                          className="object-cover transition-transform group-hover:scale-[1.03]"
-                        />
-                        {entry.item.source === "YouTube" && radio && (
-                          <span className="absolute inset-x-1 bottom-1 rounded-full bg-black/55 px-2 py-[2px] text-[10px] font-semibold text-white">
-                            라디오 재생
-                          </span>
-                        )}
-                      </button>
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[10px] text-(--notion-fg)/50">
-                        썸네일 없음
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-(--notion-fg)/60">
-                      <span className="inline-flex items-center gap-1 font-semibold">
-                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-(--notion-fg)/10 text-[10px] text-(--notion-fg)">
-                          {entry.priority}
-                        </span>
-                        <span>우선순위</span>
-                      </span>
-                      <span className="text-[10px]">
-                        적합도 {Math.round(entry.score)}점
-                      </span>
+              {aiBriefing.map((entry, index) => {
+                const entryKey =
+                  entry.item.id ?? entry.item.link ?? `${entry.item.source}-${index}`;
+                const vid = entry.item.id;
+                const syncState: NotionSyncState =
+                  (vid && notionSync[vid]) || { state: "idle" };
+                const isYoutubeEntry =
+                  entry.item.source === "YouTube" && !!vid;
+                return (
+                  <li
+                    key={`${entry.item.source}:${entryKey}:${entry.priority}:${index}`}
+                    className="flex gap-3 rounded-lg bg-(--notion-gray)/40 px-3 py-2"
+                  >
+                    <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-md bg-(--notion-gray)">
+                      {entry.item.thumbnail ? (
+                        <button
+                          type="button"
+                          onClick={() => handlePlayFromBriefing(entry)}
+                          className="group relative block h-full w-full text-left"
+                        >
+                          <Image
+                            src={entry.item.thumbnail}
+                            alt={entry.item.title}
+                            fill
+                            sizes="120px"
+                            className="object-cover transition-transform group-hover:scale-[1.03]"
+                          />
+                          {entry.item.source === "YouTube" && radio && (
+                            <span className="absolute inset-x-1 bottom-1 rounded-full bg-black/55 px-2 py-[2px] text-[10px] font-semibold text-white">
+                              라디오 재생
+                            </span>
+                          )}
+                        </button>
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[10px] text-(--notion-fg)/50">
+                          썸네일 없음
+                        </div>
+                      )}
                     </div>
-                    {entry.item.source === "YouTube" &&
-                    entry.item.id &&
-                    radio ? (
-                      <button
-                        type="button"
-                        onClick={() => handlePlayFromBriefing(entry)}
-                        className="block text-left text-[12px] font-semibold text-(--notion-fg) underline-offset-2 hover:underline"
-                      >
-                        {entry.item.title}
-                      </button>
-                    ) : (
-                      <a
-                        href={entry.item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-[12px] font-semibold text-(--notion-fg) underline-offset-2 hover:underline"
-                      >
-                        {entry.item.title}
-                      </a>
-                    )}
-                    <p className="text-[11px] leading-relaxed text-(--notion-fg)/75">
-                      {entry.why}
-                    </p>
-                    <p className="text-[11px] leading-relaxed text-(--notion-fg)/70">
-                      <span className="font-semibold">이번 주 액션:</span>{" "}
-                      {entry.action}
-                    </p>
-                  </div>
-                </li>
-              ))}
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-(--notion-fg)/60">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-(--notion-fg)/10 px-2 py-[1px] text-[10px] font-semibold text-(--notion-fg)/80">
+                          {entry.priority}순위
+                        </span>
+                        <span className="text-[10px]">
+                          적합도 {Math.round(entry.score)}점
+                        </span>
+                      </div>
+                      {entry.item.source === "YouTube" &&
+                      entry.item.id &&
+                      radio ? (
+                        <button
+                          type="button"
+                          onClick={() => handlePlayFromBriefing(entry)}
+                          className="block text-left text-[12px] font-semibold text-(--notion-fg) underline-offset-2 hover:underline"
+                        >
+                          {entry.item.title}
+                        </button>
+                      ) : (
+                        <a
+                          href={entry.item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-[12px] font-semibold text-(--notion-fg) underline-offset-2 hover:underline"
+                        >
+                          {entry.item.title}
+                        </a>
+                      )}
+                      <p className="text-[11px] leading-relaxed text-(--notion-fg)/75">
+                        {entry.why}
+                      </p>
+                      <p className="text-[11px] leading-relaxed text-(--notion-fg)/70">
+                        <span className="font-semibold">이번 주 액션:</span>{" "}
+                        {entry.action}
+                      </p>
+                      {isYoutubeEntry && (
+                        <div className="flex items-center gap-2 pt-0.5 text-[10px]">
+                          {syncState.state === "done" ? (
+                            syncState.summaryUrl ? (
+                              <a
+                                href={syncState.summaryUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-full border border-(--notion-border) px-2 py-0.5 font-semibold text-(--notion-fg)/75 hover:bg-(--notion-hover)"
+                              >
+                                ✓ 노션에서 열기
+                              </a>
+                            ) : (
+                              <span className="rounded-full border border-(--notion-border) px-2 py-0.5 font-semibold text-(--notion-fg)/55">
+                                ✓ 노션 정리됨
+                              </span>
+                            )
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => void handlePushToNotion(entry)}
+                              disabled={syncState.state === "syncing"}
+                              aria-busy={syncState.state === "syncing"}
+                              className="rounded-full border border-(--notion-border) px-2 py-0.5 font-semibold text-(--notion-fg)/70 hover:bg-(--notion-hover) disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {syncState.state === "syncing"
+                                ? "노션 정리 중..."
+                                : "📝 노션에 정리"}
+                            </button>
+                          )}
+                          {syncState.state === "error" && (
+                            <span className="text-[10px] text-red-600">
+                              {syncState.message}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
-      ) : null}
+      )}
     </section>
   );
 }

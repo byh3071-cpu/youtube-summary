@@ -71,7 +71,7 @@ export default async function TeamBriefingPage({
         <p className="text-(--notion-fg)/70">추천할 영상을 찾지 못했습니다.</p>
       ) : (
         <ul className="space-y-4">
-          {ranked.map((r, i) => (
+          {ranked.map((r) => (
             <li key={r.item.id ?? r.item.link} className="flex gap-3 rounded-lg border border-(--notion-border) bg-(--notion-bg) p-3">
               <div className="h-20 w-32 shrink-0 overflow-hidden rounded-md bg-(--notion-gray)">
                 {r.item.thumbnail && (

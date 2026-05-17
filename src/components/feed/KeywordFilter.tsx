@@ -54,16 +54,7 @@ export function useKeywordFilter() {
   return { keywords, addKeyword, removeKeyword, clearKeywords };
 }
 
-/** 필터 라벨(제목) 세로 위치 조정값 (px). 음수면 위로, 양수면 아래로 */
-const DEFAULT_FILTER_LABEL_TRANSLATE_Y_COMPACT = -8; // 전체 피드(전체/유튜브/RSS 보기 전환 있을 때)
-const DEFAULT_FILTER_LABEL_TRANSLATE_Y_SOURCE = -20; // 소스 선택 시(채널·RSS 단일 보기) 약간 위로
-/** 소스 선택 시 툴팁("~안에서 키워드로...") 위쪽 여백(px). 필터 제목과의 간격 */
-const DEFAULT_TOOLTIP_MARGIN_TOP = -30;
-/** 소스 선택 시 "열기" 버튼 위쪽 여백(px). 툴팁과의 간격 */
-const DEFAULT_OPEN_BUTTON_MARGIN_TOP = 10;
-
 interface KeywordFilterProps {
-  selectedSourceName?: string;
   keywords: string[];
   onAddKeyword: (kw: string) => void;
   onRemoveKeyword: (kw: string) => void;
@@ -76,28 +67,9 @@ interface KeywordFilterProps {
   compact?: boolean;
   /** 헤더 오른쪽에 추가로 표시할 컴포넌트 (예: 보기 전환 버튼) */
   headerRight?: ReactNode;
-  /**
-   * 전체 피드일 때 "필터" 라벨 세로 위치(px). 음수=위로. 기본 -8.
-   * 위치 조정: 이 파일 상단 DEFAULT_FILTER_LABEL_TRANSLATE_Y_* 상수 변경하거나, FeedClientContainer에서 props로 전달.
-   */
-  filterLabelTranslateYCompact?: number;
-  /**
-   * 소스 선택 시(채널/RSS 단일) "필터" 라벨 세로 위치(px). 음수=위로. 기본 0.
-   * 2~3번째 화면에서 필터가 너무 위로 올라가면 이 값을 양수(예: 8, 16)로 조정.
-   */
-  filterLabelTranslateYSource?: number;
-  /**
-   * 소스 선택 시 툴팁 문구 위쪽 여백(px). "필터" 제목과 툴팁 사이 간격. 기본 2.
-   */
-  tooltipMarginTop?: number;
-  /**
-   * 소스 선택 시 "열기" 버튼 위쪽 여백(px). 툴팁과 "열기" 버튼 사이 간격. 기본 4.
-   */
-  openButtonMarginTop?: number;
 }
 
 export default function KeywordFilter({
-  selectedSourceName,
   keywords,
   onAddKeyword,
   onRemoveKeyword,
@@ -107,18 +79,12 @@ export default function KeywordFilter({
   availableCategories,
   compact = false,
   headerRight,
-  filterLabelTranslateYCompact = DEFAULT_FILTER_LABEL_TRANSLATE_Y_COMPACT,
-  filterLabelTranslateYSource = DEFAULT_FILTER_LABEL_TRANSLATE_Y_SOURCE,
-  tooltipMarginTop = DEFAULT_TOOLTIP_MARGIN_TOP,
-  openButtonMarginTop = DEFAULT_OPEN_BUTTON_MARGIN_TOP,
 }: KeywordFilterProps) {
   const displayCategories = availableCategories ?? FEED_CATEGORIES;
   const [isAdding, setIsAdding] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
   const hasActiveFilters = keywords.length > 0;
   const [collapsed, setCollapsed] = useState(true);
-
-  const filterLabelTranslateY = compact ? filterLabelTranslateYCompact : filterLabelTranslateYSource;
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,14 +107,11 @@ export default function KeywordFilter({
             "mb-0 rounded-b-none rounded-t-none border border-t-0 border-(--notion-border) bg-(--notion-bg) px-5 pt-0 pb-1 sm:px-7 mt-0"
       }
     >
-      <div className={compact ? "mb-0 flex items-center justify-between gap-3" : "mb-0 flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between"}>
+      <div className={compact ? "mb-0 flex items-center justify-between gap-3" : "mb-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"}>
         {compact ? (
           <>
-            <div className="ml-2 flex items-center gap-3">
-              <h2
-                className="mb-0 text-sm font-semibold"
-                style={{ transform: `translateY(${filterLabelTranslateY}px)` }}
-              >
+            <div className="flex items-center gap-3">
+              <h2 className="mb-0 text-sm font-semibold">
                 필터
               </h2>
               {headerRight ? <div className="shrink-0">{headerRight}</div> : null}
@@ -164,12 +127,9 @@ export default function KeywordFilter({
             </button>
           </>
         ) : (
-          <div className="flex min-w-0 flex-col gap-0.5 sm:min-w-0">
+          <div className="flex min-w-0 flex-col gap-2 sm:min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <h2
-                className="relative mb-0 shrink-0 text-sm font-semibold"
-                style={{ transform: `translateY(${filterLabelTranslateY}px)` }}
-              >
+              <h2 className="mb-0 shrink-0 text-sm font-semibold">
                 필터
               </h2>
               <div className="flex items-center gap-2">
@@ -251,7 +211,7 @@ export default function KeywordFilter({
               }}
               placeholder="관심 키워드를 입력하세요"
               aria-label="관심 키워드 입력"
-              className="w-48 rounded-full border border-(--notion-border) bg-(--notion-bg) px-3 py-1.5 text-sm font-medium focus:border-(--notion-fg)/30 focus:outline-none"
+              className="w-full sm:w-48 rounded-full border border-(--notion-border) bg-(--notion-bg) px-3 py-1.5 text-sm font-medium focus:border-(--notion-fg)/30 focus:outline-none"
             />
 
             <button
@@ -293,15 +253,17 @@ export default function KeywordFilter({
       </AutoAnimateList>
       )}
 
-      {!collapsed && !compact && !hasActiveFilters && !isAdding && (
-        <p className="mt-3 text-xs leading-relaxed text-(--notion-fg)/45">
-          예시: `AI`, `생산성`, `개발`, `자동화`
-        </p>
-      )}
       {!collapsed && !compact && (
-        <p className="mt-2 text-[11px] text-(--notion-fg)/40">
-          키워드 필터는 이 기기·이 브라우저에만 저장됩니다.
-        </p>
+        <div className="mt-3 space-y-1.5">
+          {!hasActiveFilters && !isAdding && (
+            <p className="text-xs leading-relaxed text-(--notion-fg)/45">
+              예시: `AI`, `생산성`, `개발`, `자동화`
+            </p>
+          )}
+          <p className="text-[11px] text-(--notion-fg)/40">
+            키워드 필터는 이 기기·이 브라우저에만 저장됩니다.
+          </p>
+        </div>
       )}
     </section>
   );

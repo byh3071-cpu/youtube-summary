@@ -62,6 +62,7 @@ export type Database = {
           summary_count: number;
           insight_count: number;
           briefing_count: number;
+          feed_qa_count: number;
           updated_at: string;
         };
         Insert: {
@@ -70,6 +71,7 @@ export type Database = {
           summary_count?: number;
           insight_count?: number;
           briefing_count?: number;
+          feed_qa_count?: number;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["usage_daily"]["Row"]>;

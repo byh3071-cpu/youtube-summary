@@ -47,8 +47,14 @@ declare namespace YT {
 const PLAYER_DIV_ID = "yt-radio-player-host";
 const PLAYER_WRAPPER_ID = "yt-radio-player-wrapper";
 
+type RadioOptional = ReturnType<typeof useRadioQueueOptional>;
+type RadioRefValue = NonNullable<RadioOptional>;
+
 export default function FloatingRadioPlayer() {
   const radio = useRadioQueueOptional();
+  const radioRef = useRef<RadioRefValue | null>(null);
+  radioRef.current = radio ?? null;
+
   const playerRef = useRef<YT.Player | null>(null);
   const [apiReady, setApiReady] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
@@ -83,7 +89,7 @@ export default function FloatingRadioPlayer() {
     firstScript?.parentNode?.insertBefore(tag, firstScript);
     const prevReady = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
-      prevReady?.();
+      try { prevReady?.(); } catch { /* 이전 콜백 오류 무시 */ }
       setApiReady(true);
     };
     return () => {
@@ -108,11 +114,11 @@ export default function FloatingRadioPlayer() {
         events: {
           onReady(ev: { target: YT.Player }) {
             setPlayerReady(true);
-            if (radio.isPlaying) ev.target.playVideo();
+            if (radioRef.current?.isPlaying) ev.target.playVideo();
           },
           onStateChange(ev: { data: number }) {
             if (window.YT && ev.data === window.YT.PlayerState.ENDED) {
-              radio.next();
+              radioRef.current?.next();
             }
           },
         },
@@ -125,33 +131,34 @@ export default function FloatingRadioPlayer() {
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady, radio?.currentItem?.videoId, playerReady]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- player 인스턴스 재생성 비용 때문에 videoId·ready·재생 상태만 동기화
+  }, [apiReady, radio?.currentItem?.videoId, playerReady, radio?.isPlaying]);
 
   useEffect(() => {
-    if (!playerRef.current || !radio || !playerReady) return;
-    if (radio.isPlaying && typeof playerRef.current.playVideo === "function") {
+    if (!playerRef.current || !radioRef.current || !playerReady) return;
+    const r = radioRef.current;
+    if (r.isPlaying && typeof playerRef.current.playVideo === "function") {
       playerRef.current.playVideo();
-    } else if (!radio.isPlaying && typeof playerRef.current.pauseVideo === "function") {
+    } else if (!r.isPlaying && typeof playerRef.current.pauseVideo === "function") {
       playerRef.current.pauseVideo();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radio?.isPlaying, playerReady]);
 
   useEffect(() => {
-    if (radio && radio.queue.length === 0) {
+    const r = radioRef.current;
+    if (r && r.queue.length === 0) {
       playerRef.current = null;
       setPlayerReady(false);
       setProgress(0);
       setResumeSeconds(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radio?.queue.length]);
 
   // 재생 중인 영상이 바뀌면 진행 바를 즉시 0으로 리셋 (이전 영상 진행도가 남아 점점 사라지는 현상 방지)
   useEffect(() => {
     if (!radio?.currentItem) return;
     setProgress(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- videoId 변경만 진행 바 초기화 트리거로 사용
   }, [radio?.currentItem?.videoId]);
 
   // 현재 큐 아이템 기준으로 저장된 마지막 시청 위치 불러오기 (완료한 영상은 제외)
@@ -205,7 +212,8 @@ export default function FloatingRadioPlayer() {
 
     const update = () => {
       try {
-        const item = radio?.currentItem;
+        const r = radioRef.current;
+        const item = r?.currentItem;
         if (!item) return;
         let current = 0;
         let duration = 0;
@@ -241,8 +249,8 @@ export default function FloatingRadioPlayer() {
             saveWatchProgress(item.videoId, current, duration);
             lastSavedAt = now;
           }
-          if (now - lastBroadcastAt > 1000 && typeof radio?.updatePlayback === "function") {
-            radio.updatePlayback({
+          if (now - lastBroadcastAt > 1000 && typeof r?.updatePlayback === "function") {
+            r.updatePlayback({
               videoId: item.videoId,
               positionSeconds: current,
               durationSeconds: duration,
@@ -262,7 +270,6 @@ export default function FloatingRadioPlayer() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (frameId !== null) cancelAnimationFrame(frameId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- playerReady + 현재 재생 videoId + isPlaying만 의존, radio 전체 제외로 불필요 재실행 방지
   }, [playerReady, radio?.currentItem?.videoId, radio?.currentItem, radio?.isPlaying]);
 
   // 미니/전체 영상: YT가 1x1로 만든 iframe을 모드에 맞게 리사이즈
@@ -313,8 +320,8 @@ export default function FloatingRadioPlayer() {
   }, [fullPlayerOpen]);
 
   const togglePlay = useCallback(() => {
-    radio?.togglePlay();
-  }, [radio]);
+    radioRef.current?.togglePlay();
+  }, []);
 
   const handleSeek = useCallback((percent: number) => {
     const p = playerRef.current as { getDuration?: () => number; seekTo?: (sec: number, allow: boolean) => void } | null;

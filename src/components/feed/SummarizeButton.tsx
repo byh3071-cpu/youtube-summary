@@ -36,7 +36,7 @@ export default function SummarizeButton({ videoId }: Props) {
     setIsOpen(true);
 
     if (summary) {
-      return;
+      return; 
     }
 
     if (requestInFlight.current) return;
@@ -52,9 +52,10 @@ export default function SummarizeButton({ videoId }: Props) {
       } else if (result.summary) {
         setSummary(result.summary);
         localStorage.setItem(`summary_${videoId}`, result.summary);
+        window.dispatchEvent(new Event("focus-feed:usage-updated"));
       }
     } catch {
-      setError("요약 요청 중 오류가 발생했습니다.");
+      setError("요약 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setLoading(false);
       requestInFlight.current = false;

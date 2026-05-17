@@ -5,6 +5,7 @@ import { getMergedFeed } from "@/lib/feed";
 import type { FeedItem } from "@/types/feed";
 import { getTrendRadarPrompt } from "@/lib/prompts";
 import { getTypedTable } from "@/lib/supabase-server";
+import { guardTrendGeminiRateLimit } from "@/lib/gemini-rate-limit";
 
 export type TrendRadarItem = {
   keyword: string;
@@ -141,6 +142,11 @@ export async function getTrendRadar(forceRefresh = false): Promise<TrendRadarRes
 
   // 너무 많으면 상위 N개만 전달 (예: 80개)
   const limited = recent.slice(0, 80);
+
+  const trendRl = await guardTrendGeminiRateLimit();
+  if (!trendRl.ok) {
+    return null;
+  }
 
   const trends = await callGeminiForTrends(limited);
   if (!trends || trends.length === 0) return null;

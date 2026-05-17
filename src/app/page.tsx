@@ -1,17 +1,11 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import AppLayout from "@/components/layout/AppLayout";
 import FeedClientContainer from "@/components/feed/FeedClientContainer";
 import FeedHeader from "@/components/feed/FeedHeader";
 import TrendRadarBar from "@/components/trend/TrendRadarBar";
 import { getMergedFeed } from "@/lib/feed";
-import { defaultSources, FEED_CATEGORIES } from "@/lib/sources";
-import {
-  getCustomSourcesFromCookie,
-  mergeCustomSources,
-  CUSTOM_SOURCES_COOKIE_NAME,
-} from "@/lib/custom-sources-cookie";
-import { getCustomSourcesFromDb } from "@/lib/supabase-server-cookies";
+import { FEED_CATEGORIES } from "@/lib/sources";
+import { getSessionMergedSources, getSessionCustomSourceIds } from "@/lib/merged-session-sources";
 import { resolveYouTubeChannel } from "@/lib/youtube";
 import type { FeedCategory, FeedItem } from "@/types/feed";
 import type { FeedSource } from "@/lib/sources";
@@ -66,22 +60,13 @@ function parseCategory(value: string | undefined): FeedCategory | null {
   return FEED_CATEGORIES.includes(value as FeedCategory) ? (value as FeedCategory) : null;
 }
 
-function mergeSources(defaultList: FeedSource[], custom: FeedSource[]): FeedSource[] {
-  const existingIds = new Set(defaultList.map((s) => s.id));
-  const extra = custom.filter((c) => !existingIds.has(c.id));
-  return [...defaultList, ...extra];
-}
-
 export default async function Home({ searchParams }: HomeProps) {
   const resolvedSearchParams = await searchParams;
   const selectedSourceId = resolvedSearchParams?.source;
   const initialView = parseView(resolvedSearchParams?.view);
   const viewMode = parseViewMode(resolvedSearchParams?.viewMode);
-  const cookieStore = await cookies();
-  const customFromCookie = getCustomSourcesFromCookie(cookieStore.get(CUSTOM_SOURCES_COOKIE_NAME)?.value);
-  const customFromDb = await getCustomSourcesFromDb(cookieStore);
-  const customSources = mergeCustomSources(customFromCookie, customFromDb);
-  const mergedSources = mergeSources(defaultSources, customSources);
+  const mergedSources = await getSessionMergedSources();
+  const customYouTubeSourceIds = await getSessionCustomSourceIds();
 
   // YouTube 채널 프로필 이미지(avatarUrl) 하이드레이션
   const hydratedSources: FeedSource[] = await Promise.all(
@@ -109,9 +94,6 @@ export default async function Home({ searchParams }: HomeProps) {
     : items;
   if (viewMode) visibleItems = filterByViewMode(visibleItems, viewMode);
   const youtubeSources = hydratedSources.filter((s) => s.type === "YouTube");
-  const rssSourceCount = defaultSources.filter((source) => source.type === "RSS").length;
-
-  const customYouTubeSourceIds = customSources.map((s) => s.id);
 
   // 채널별 최신 영상 시간 (최근 표시용)
   const latestMap = new Map<string, string>();
@@ -157,6 +139,7 @@ export default async function Home({ searchParams }: HomeProps) {
         <FeedClientContainer
           initialItems={visibleItems}
           selectedSourceName={selectedSource?.name}
+          selectedSourceId={selectedSource?.id}
           initialCategory={initialCategory}
           initialView={initialView}
           showViewSwitcher={showViewSwitcher}

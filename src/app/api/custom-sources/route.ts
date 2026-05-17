@@ -64,7 +64,6 @@ export async function POST(request: Request) {
     category: category ?? "기타",
     avatar_url: avatarUrl ?? null,
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase PostgREST never 타입 이슈 우회
   const { error } = await supabase.from("custom_sources").insert(row as never);
   if (error) {
     if (error.code === "23505") {

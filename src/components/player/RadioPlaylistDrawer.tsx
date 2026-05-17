@@ -56,7 +56,7 @@ export function RadioPlaylistDrawer({ drawerOpen, setDrawerOpen }: RadioPlaylist
       variant="bottom"
       panelClassName="fixed bottom-16 left-4 right-4 max-h-[70vh] overflow-auto rounded-t-2xl border border-b-0 border-(--notion-border) bg-(--notion-bg) shadow-2xl md:left-auto md:right-6 md:max-w-md"
     >
-      <div className="outline-none" role="dialog" aria-label="재생 대기열">
+      <div className="outline-none" role="dialog" aria-modal="true" aria-label="재생 대기열">
         <div className="sticky top-0 border-b border-(--notion-border) bg-(--notion-gray)">
           <div className="grid grid-cols-3 items-center gap-2 px-4 py-4">
             <div className="flex items-center justify-start">
@@ -74,7 +74,7 @@ export function RadioPlaylistDrawer({ drawerOpen, setDrawerOpen }: RadioPlaylist
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="rounded-full p-1.5 text-(--notion-fg)/60 hover:bg-(--notion-hover) hover:text-(--notion-fg)"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-(--notion-fg)/60 hover:bg-(--notion-hover) hover:text-(--notion-fg) min-h-[44px] min-w-[44px] touch-manipulation"
                 aria-label="닫기"
               >
                 <X size={20} />
@@ -82,7 +82,7 @@ export function RadioPlaylistDrawer({ drawerOpen, setDrawerOpen }: RadioPlaylist
             </div>
           </div>
           {saveMessage && (
-            <p className="px-4 pb-2 text-[11px] text-(--notion-fg)/65">
+            <p className="px-4 pb-2 text-[11px] text-(--notion-fg)/65" aria-live="polite">
               {saveMessage}
             </p>
           )}
@@ -109,7 +109,7 @@ export function RadioPlaylistDrawer({ drawerOpen, setDrawerOpen }: RadioPlaylist
                   qaLog.radio.queueRemoved(index, item.videoId);
                   radio.removeFromQueue(index);
                 }}
-                className="shrink-0 rounded-full p-1 text-(--notion-fg)/50 hover:bg-(--notion-hover) hover:text-red-600"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-(--notion-fg)/50 hover:bg-(--notion-hover) hover:text-red-600 min-h-[44px] min-w-[44px] touch-manipulation"
                 aria-label="목록에서 제거"
               >
                 <Trash2 size={14} />

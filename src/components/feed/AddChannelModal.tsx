@@ -74,7 +74,7 @@ export default function AddChannelModal({
       };
       const updated = [...existing, newSource];
       document.cookie = buildCustomSourcesCookie(updated);
-      fetch("/api/custom-sources", {
+      const syncRes = await fetch("/api/custom-sources", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,7 +83,10 @@ export default function AddChannelModal({
           category,
           avatarUrl: avatarUrl ?? undefined,
         }),
-      }).catch(() => {});
+      });
+      if (!syncRes.ok) {
+        console.warn("[AddChannelModal] custom source DB sync failed", await syncRes.text());
+      }
       onAdded?.();
       onClose();
       setInput("");

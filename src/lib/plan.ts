@@ -3,13 +3,16 @@
 import { getCurrentUserFromCookies } from "@/lib/supabase-server-cookies";
 import { getServerSupabaseClient } from "@/lib/supabase-server";
 import type { CookieStore } from "@/lib/supabase-server-cookies";
+import {
+  FREE_DAILY_INSIGHT,
+  FREE_DAILY_SUMMARY,
+  FREE_DAILY_FEED_QA,
+  FREE_WEEKLY_BRIEFING,
+  getKstDateString,
+  getKstWeekStart,
+} from "@/lib/usage-limits";
 
 export type UserPlan = "owner" | "free" | "pro";
-
-/** Free 플랜 일일/주간 제한 */
-const FREE_DAILY_SUMMARY = 5;
-const FREE_DAILY_INSIGHT = 3;
-const FREE_WEEKLY_BRIEFING = 1;
 
 /**
  * 로그인한 사용자의 플랜 반환. 비로그인 시 null.
@@ -45,7 +48,7 @@ export async function getPlanForUser(cookieStore: CookieStore): Promise<UserPlan
  */
 export async function checkUsageLimit(
   cookieStore: CookieStore,
-  kind: "summary" | "insight" | "briefing",
+  kind: "summary" | "insight" | "briefing" | "feed_qa",
 ): Promise<{ allowed: true } | { allowed: false; error: string }> {
   const user = await getCurrentUserFromCookies(cookieStore);
   if (!user) {
@@ -59,7 +62,7 @@ export async function checkUsageLimit(
   const supabase = getServerSupabaseClient();
   if (!supabase) return { allowed: true };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getKstDateString();
 
   if (kind === "summary") {
     const { data } = (await supabase
@@ -94,7 +97,7 @@ export async function checkUsageLimit(
   }
 
   if (kind === "briefing") {
-    const weekStart = getWeekStart(today);
+    const weekStart = getKstWeekStart(today);
     const { data: rows } = (await supabase
       .from("usage_daily")
       .select("briefing_count")
@@ -110,16 +113,23 @@ export async function checkUsageLimit(
     }
   }
 
-  return { allowed: true };
-}
+  if (kind === "feed_qa") {
+    const { data } = (await supabase
+      .from("usage_daily")
+      .select("feed_qa_count")
+      .eq("user_id", user.id)
+      .eq("date", today)
+      .maybeSingle()) as { data: { feed_qa_count: number } | null };
+    const count = data?.feed_qa_count ?? 0;
+    if (count >= FREE_DAILY_FEED_QA) {
+      return {
+        allowed: false,
+        error: `오늘 피드 Q&A 한도(${FREE_DAILY_FEED_QA}회)를 모두 사용했습니다. Pro로 업그레이드하면 무제한 이용할 수 있습니다.`,
+      };
+    }
+  }
 
-/** 해당 날짜가 속한 주의 월요일(YYYY-MM-DD) */
-function getWeekStart(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00Z");
-  const day = d.getUTCDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setUTCDate(d.getUTCDate() + diff);
-  return d.toISOString().slice(0, 10);
+  return { allowed: true };
 }
 
 /**
@@ -127,7 +137,7 @@ function getWeekStart(dateStr: string): string {
  */
 export async function incrementUsage(
   cookieStore: CookieStore,
-  kind: "summary" | "insight" | "briefing",
+  kind: "summary" | "insight" | "briefing" | "feed_qa",
 ): Promise<void> {
   const user = await getCurrentUserFromCookies(cookieStore);
   if (!user) return;
@@ -138,15 +148,20 @@ export async function incrementUsage(
   const supabase = getServerSupabaseClient();
   if (!supabase) return;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getKstDateString();
   const table = supabase.from("usage_daily");
 
   const { data: row } = (await table
-    .select("summary_count, insight_count, briefing_count")
+    .select("summary_count, insight_count, briefing_count, feed_qa_count")
     .eq("user_id", user.id)
     .eq("date", today)
     .maybeSingle()) as {
-    data: { summary_count: number; insight_count: number; briefing_count: number } | null;
+    data: {
+      summary_count: number;
+      insight_count: number;
+      briefing_count: number;
+      feed_qa_count: number;
+    } | null;
   };
 
   const next = {
@@ -155,6 +170,7 @@ export async function incrementUsage(
     summary_count: row ? row.summary_count + (kind === "summary" ? 1 : 0) : kind === "summary" ? 1 : 0,
     insight_count: row ? row.insight_count + (kind === "insight" ? 1 : 0) : kind === "insight" ? 1 : 0,
     briefing_count: row ? row.briefing_count + (kind === "briefing" ? 1 : 0) : kind === "briefing" ? 1 : 0,
+    feed_qa_count: row ? (row.feed_qa_count ?? 0) + (kind === "feed_qa" ? 1 : 0) : kind === "feed_qa" ? 1 : 0,
     updated_at: new Date().toISOString(),
   };
 

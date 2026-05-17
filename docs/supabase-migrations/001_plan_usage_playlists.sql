@@ -38,3 +38,5 @@ ALTER TABLE public.playlists
   ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON public.playlists(user_id);
+
+-- 피드 Q&A 일일 한도 컬럼: `002_usage_daily_feed_qa.sql` 참고.

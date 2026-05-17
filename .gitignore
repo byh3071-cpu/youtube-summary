@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+.claude/
+.cursor/
 
 # debug
 npm-debug.log*
@@ -40,6 +42,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
 # lint reports
 eslint-report.txt

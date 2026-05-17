@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
-import { Rss, Youtube, Tag, Bookmark, ListMusic, Film, Clapperboard, Radio, Users } from "lucide-react";
+import { useSearchParams, usePathname } from "next/navigation";
+import { Rss, Youtube, Tag, Bookmark, ListMusic, Film, Clapperboard, Radio, Users, TrendingUp } from "lucide-react";
 import { defaultSources, FEED_CATEGORIES } from "@/lib/sources";
 import { LoginButton } from "@/components/auth/LoginButton";
 import AddChannelButton from "@/components/feed/AddChannelButton";
@@ -36,7 +36,6 @@ function SidebarViewModeLinks({ currentViewMode }: { currentViewMode: string | n
 }
 
 export default function Sidebar({
-    sourceStatus,
     selectedSourceId,
     selectedCategory,
     youtubeSources: youtubeSourcesProp,
@@ -52,6 +51,7 @@ export default function Sidebar({
 }) {
     const youtubeSources = youtubeSourcesProp ?? defaultSources.filter((s) => s.type === "YouTube");
     const searchParams = useSearchParams();
+    const pathname = usePathname();
     const viewMode = searchParams?.get("viewMode") ?? null;
     return (
         <aside className="hidden w-72 shrink-0 bg-white dark:bg-(--notion-gray) md:flex md:flex-col">
@@ -71,8 +71,19 @@ export default function Sidebar({
                     </div>
                     <div className="flex w-full justify-center">
                         <Link
+                            href="/trends"
+                            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${pathname === "/trends" ? "bg-(--notion-hover) text-(--notion-fg)" : "text-(--notion-fg)/80 hover:bg-(--notion-hover)"}`}
+                        >
+                            <span className="inline-flex items-center gap-1.5">
+                                <TrendingUp size={14} className="shrink-0" />
+                                트렌드
+                            </span>
+                        </Link>
+                    </div>
+                    <div className="flex w-full justify-center">
+                        <Link
                             href="/"
-                            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${!selectedSourceId && !selectedCategory && !viewMode ? "bg-(--notion-hover) text-(--notion-fg)" : "text-(--notion-fg)/80 hover:bg-(--notion-hover)"}`}
+                            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${!selectedSourceId && !selectedCategory && !viewMode && pathname === "/" ? "bg-(--notion-hover) text-(--notion-fg)" : "text-(--notion-fg)/80 hover:bg-(--notion-hover)"}`}
                         >
                             전체 피드
                         </Link>

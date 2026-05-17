@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Check, Loader2 } from "lucide-react";
 
 export default function PricingClient({
@@ -33,7 +32,7 @@ export default function PricingClient({
         return;
       }
       setError("결제 URL을 받지 못했습니다.");
-    } catch (e) {
+    } catch {
       setError("요청 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);

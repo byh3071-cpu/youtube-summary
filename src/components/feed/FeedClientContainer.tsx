@@ -11,6 +11,9 @@ import FeedSearch from "./FeedSearch";
 import KeywordFilter, { useKeywordFilter } from "./KeywordFilter";
 import ViewSwitcher, { type ViewMode } from "./ViewSwitcher";
 import MyFocusSection from "./MyFocusSection";
+import WelcomeBanner from "./WelcomeBanner";
+import UsageBadge from "./UsageBadge";
+import FeedQADrawer from "./FeedQADrawer";
 import { TrendFilterProvider, useTrendFilter } from "@/contexts/TrendFilterContext";
 import { FEED_CATEGORIES } from "@/lib/sources";
 
@@ -32,13 +35,11 @@ function filterByView(items: FeedItem[], view: ViewMode): FeedItem[] {
 type FeedClientContainerProps = {
     initialItems: FeedItem[];
     selectedSourceName?: string;
+    /** 단일 소스 보기일 때 피드 Q&A 컨텍스트 제한용 */
+    selectedSourceId?: string;
     initialCategory?: FeedCategory | null;
     initialView?: ViewMode;
     showViewSwitcher?: boolean;
-    filterLabelTranslateYCompact?: number;
-    filterLabelTranslateYSource?: number;
-    tooltipMarginTop?: number;
-    openButtonMarginTop?: number;
     viewMode?: "longform" | "shortform" | "live" | null;
     children?: ReactNode;
 };
@@ -54,14 +55,11 @@ export default function FeedClientContainer(props: FeedClientContainerProps) {
 function FeedClientContainerContent({
     initialItems,
     selectedSourceName,
+    selectedSourceId,
     initialCategory = null,
     initialView = "all",
     showViewSwitcher = false,
     viewMode = null,
-    filterLabelTranslateYCompact,
-    filterLabelTranslateYSource,
-    tooltipMarginTop,
-    openButtonMarginTop,
     children,
 }: FeedClientContainerProps) {
     const router = useRouter();
@@ -134,7 +132,9 @@ function FeedClientContainerContent({
 
     return (
         <>
+            {isGlobalFeed && <WelcomeBanner />}
             {isGlobalFeed && <MyFocusSection />}
+            {isGlobalFeed && <UsageBadge />}
 
             {isGlobalFeed && (
                 <div style={{ marginBottom: 12, padding: "0 4px" }}>
@@ -143,7 +143,6 @@ function FeedClientContainerContent({
             )}
 
             <KeywordFilter
-                selectedSourceName={selectedSourceName}
                 keywords={keywords}
                 onAddKeyword={addKeyword}
                 onRemoveKeyword={removeKeyword}
@@ -155,10 +154,6 @@ function FeedClientContainerContent({
                 headerRight={
                     showViewSwitcher ? <ViewSwitcher currentView={view} /> : undefined
                 }
-                filterLabelTranslateYCompact={filterLabelTranslateYCompact}
-                filterLabelTranslateYSource={filterLabelTranslateYSource}
-                tooltipMarginTop={tooltipMarginTop}
-                openButtonMarginTop={openButtonMarginTop}
             />
             {children}
             <FeedList
@@ -170,6 +165,7 @@ function FeedClientContainerContent({
                 onBookmarkChange={fetchBookmarks}
                 totalCount={selectedSourceName ? filteredItems.length : undefined}
             />
+            <FeedQADrawer selectedSourceId={selectedSourceId} />
         </>
     );
 }

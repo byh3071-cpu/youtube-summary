@@ -99,6 +99,19 @@ export async function getBookmarksFromDb(cookieStore: CookieStore): Promise<Book
     .is("team_id", null)
     .order("created_at", { ascending: false });
   if (error) {
+    // team_id 컬럼이 DB에 아직 없을 경우 폴백: user_id 필터만으로 재시도
+    if (error.message.includes("team_id") || error.code === "42703") {
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("bookmarks")
+        .select("id, video_id, video_title, highlight, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (fallbackError) {
+        console.error("[getBookmarksFromDb fallback]", fallbackError.message);
+        return [];
+      }
+      return (fallback ?? []) as BookmarkRow[];
+    }
     console.error("[getBookmarksFromDb]", error.message);
     return [];
   }

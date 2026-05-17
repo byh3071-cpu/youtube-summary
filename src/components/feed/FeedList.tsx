@@ -9,6 +9,7 @@ import Image from "next/image";
 
 const YOUTUBE_PAGE_SIZE = 60;
 const RSS_PAGE_SIZE = 30;
+const FLAT_LIST_PAGE_SIZE = 48;
 
 type ViewMode = "all" | "youtube" | "rss";
 
@@ -29,6 +30,40 @@ function EmptyBlock({ message }: { message: string }) {
         <div className="rounded-xl border border-dashed border-(--notion-border) bg-(--notion-gray)/30 py-6 text-center text-sm text-(--notion-fg)/45">
             {message}
         </div>
+    );
+}
+
+function FeedListFlat({ items }: { items: FeedItemType[] }) {
+    const [flatLimit, setFlatLimit] = useState(FLAT_LIST_PAGE_SIZE);
+    const flatVisible = items.slice(0, flatLimit);
+    const flatRemaining = items.length - flatVisible.length;
+    return (
+        <section className="overflow-hidden rounded-2xl border border-(--notion-border) bg-(--notion-bg)">
+            <div className="border-b border-(--notion-border) bg-(--notion-gray) px-4 py-3 text-sm text-(--notion-fg)/60 sm:px-5">
+                최신순으로 정렬된 피드입니다. 항목을 클릭하면 원문으로 이동합니다.
+            </div>
+            <div className="flex flex-col">
+                {flatVisible.map((item) => (
+                    <div
+                        key={`${item.source}:${item.sourceId}:${item.id}`}
+                        className="[content-visibility:auto] [contain-intrinsic-size:auto_80px]"
+                    >
+                        <FeedItemComponent item={item} />
+                    </div>
+                ))}
+            </div>
+            {flatRemaining > 0 && (
+                <div className="flex justify-center border-t border-(--notion-border) py-3">
+                    <button
+                        type="button"
+                        onClick={() => setFlatLimit((p) => p + FLAT_LIST_PAGE_SIZE)}
+                        className="rounded-full border border-(--notion-border) px-4 py-2 text-xs font-semibold text-(--notion-fg)/60 hover:bg-(--notion-hover)"
+                    >
+                        더 보기 ({flatRemaining}개 남음)
+                    </button>
+                </div>
+            )}
+        </section>
     );
 }
 
@@ -80,18 +115,7 @@ export default function FeedList({ items, hasActiveFilters = false, selectedSour
     }
 
     if (!useTickerLayout) {
-        return (
-            <section className="overflow-hidden rounded-2xl border border-(--notion-border) bg-(--notion-bg)">
-                <div className="border-b border-(--notion-border) bg-(--notion-gray) px-4 py-3 text-sm text-(--notion-fg)/60 sm:px-5">
-                    최신순으로 정렬된 피드입니다. 항목을 클릭하면 원문으로 이동합니다.
-                </div>
-                <div className="flex flex-col">
-                    {items.map((item) => (
-                        <FeedItemComponent key={`${item.source}:${item.sourceId}:${item.id}`} item={item} />
-                    ))}
-                </div>
-            </section>
-        );
+        return <FeedListFlat key={items.length} items={items} />;
     }
 
     // '전체' 보기 모드일 때 해당 소스가 아예 없으면 섹션 자체를 숨김 (사용자 요청: RSS 선택 시 유튜브 칸 삭제)

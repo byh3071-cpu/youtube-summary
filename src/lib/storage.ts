@@ -7,6 +7,8 @@ export interface UserPreferences {
 
 const STORAGE_KEY = 'focus_feed_preferences';
 
+/** 키워드 등: 브라우저 localStorage만 사용(제품 정책 B). URL·Supabase와 동기화하지 않음. */
+
 const defaultPreferences: UserPreferences = {
     keywords: [], // 예: ['AI', '자동화', '생산성']
     hiddenSources: [],
