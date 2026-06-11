@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileHeaderWithNav from "@/components/layout/MobileHeaderWithNav";
 import FloatingRadioPlayer from "@/components/player/FloatingRadioPlayer";
+import CustomSourcesSync from "@/components/feed/CustomSourcesSync";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import AuthErrorBanner from "@/components/ui/AuthErrorBanner";
 import AuthSuccessBanner from "@/components/ui/AuthSuccessBanner";
@@ -66,6 +67,7 @@ export default function AppLayout({ children, sourceStatus, selectedSourceId, se
             </main>
 
             <FloatingRadioPlayer />
+            <CustomSourcesSync />
             <ScrollToTop />
             </div>
         </div>

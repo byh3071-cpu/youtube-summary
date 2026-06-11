@@ -36,6 +36,11 @@ export async function syncVideoToNotionAction(args: {
     return { error: "videoId와 title이 필요합니다." };
   }
 
+  // AI 섹션 분석에 필수 — 노션 조회·자막 추출 전에 빠르게 실패시킨다.
+  if (!process.env.GEMINI_API_KEY) {
+    return { error: ".env.local 파일에 GEMINI_API_KEY 설정이 필요합니다." };
+  }
+
   const env = getNotionEnv();
   if (!env.ok) {
     return {
@@ -80,9 +85,9 @@ export async function syncVideoToNotionAction(args: {
     hint,
   });
   if (!analysis) {
+    // GEMINI_API_KEY 누락은 액션 진입부에서 이미 걸러지므로 여기는 생성·파싱 실패
     return {
-      error:
-        "AI 섹션 분석에 실패했습니다. GEMINI_API_KEY 또는 응답 파싱을 확인해 주세요.",
+      error: "AI 섹션 분석에 실패했습니다. 잠시 후 다시 시도해 주세요.",
     };
   }
 

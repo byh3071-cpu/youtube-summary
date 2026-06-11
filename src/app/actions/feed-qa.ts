@@ -1,16 +1,15 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { GoogleGenAI } from "@google/genai";
 import { getMergedFeed } from "@/lib/feed";
 import { getSessionMergedSources } from "@/lib/merged-session-sources";
 import type { CookieStore } from "@/lib/supabase-server-cookies";
 import { checkUsageLimit, incrementUsage } from "@/lib/plan";
 import { guardGeminiActionRateLimit } from "@/lib/gemini-rate-limit";
+import { generateGeminiText } from "@/lib/gemini";
 import { getFeedQAPrompt } from "@/lib/prompts";
 import type { FeedItem } from "@/types/feed";
 
-const GEMINI_MODEL_ID = "models/gemini-1.5-flash";
 const CONTEXT_ITEM_CAP = 50;
 const QUESTION_MAX = 500;
 const HISTORY_TURNS_MAX = 6;
@@ -36,27 +35,8 @@ function buildContextLines(items: FeedItem[]): string[] {
 }
 
 async function generateAnswer(prompt: string): Promise<string | null> {
-  if (!process.env.GEMINI_API_KEY) return null;
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  async function run(model: string) {
-    const res = await ai.models.generateContent({ model, contents: prompt });
-    return (res.text || "").trim() || null;
-  }
-  try {
-    return await run(GEMINI_MODEL_ID);
-  } catch (e: unknown) {
-    const err = e as { error?: { code?: number | string }; code?: number | string; status?: number | string };
-    const code = err.error?.code ?? err.code ?? err.status;
-    if (code === 404 || code === "NOT_FOUND") {
-      try {
-        return await run("models/gemini-flash-latest");
-      } catch {
-        return null;
-      }
-    }
-    console.error("[FeedQA] Gemini generateContent failed", e);
-    return null;
-  }
+  const raw = await generateGeminiText(prompt, "FeedQA");
+  return raw?.trim() || null;
 }
 
 function formatHistoryForPrompt(history: FeedQAHistoryTurn[] | undefined): string {

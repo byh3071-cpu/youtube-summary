@@ -5,7 +5,7 @@ import FeedHeader from "@/components/feed/FeedHeader";
 import TrendRadarBar from "@/components/trend/TrendRadarBar";
 import { getMergedFeed } from "@/lib/feed";
 import { FEED_CATEGORIES } from "@/lib/sources";
-import { getSessionMergedSources, getSessionCustomSourceIds } from "@/lib/merged-session-sources";
+import { getSessionSourcesBundle } from "@/lib/merged-session-sources";
 import { resolveYouTubeChannel } from "@/lib/youtube";
 import type { FeedCategory, FeedItem } from "@/types/feed";
 import type { FeedSource } from "@/lib/sources";
@@ -65,8 +65,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const selectedSourceId = resolvedSearchParams?.source;
   const initialView = parseView(resolvedSearchParams?.view);
   const viewMode = parseViewMode(resolvedSearchParams?.viewMode);
-  const mergedSources = await getSessionMergedSources();
-  const customYouTubeSourceIds = await getSessionCustomSourceIds();
+  const { mergedSources, customSourceIds: customYouTubeSourceIds } = await getSessionSourcesBundle();
 
   // YouTube 채널 프로필 이미지(avatarUrl) 하이드레이션
   const hydratedSources: FeedSource[] = await Promise.all(

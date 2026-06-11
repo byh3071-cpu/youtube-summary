@@ -16,7 +16,7 @@ export function validateEnv() {
   const recommended = [
     "SUPABASE_SERVICE_ROLE_KEY",
     "YOUTUBE_API_KEY",
-    "GOOGLE_GEMINI_API_KEY",
+    "GEMINI_API_KEY",
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
     "OWNER_EMAIL",

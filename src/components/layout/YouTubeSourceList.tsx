@@ -1,22 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
-import {
-  CUSTOM_SOURCES_COOKIE_NAME,
-  getCustomSourcesFromCookie,
-  buildCustomSourcesCookie,
-} from "@/lib/custom-sources-cookie";
+import { Loader2, Trash2 } from "lucide-react";
 import type { FeedSource } from "@/lib/sources";
 
 const LAST_SEEN_SOURCE_KEY = "focus_feed_last_seen_source";
 
-function getCookie(name: string): string | undefined {
-  if (typeof document === "undefined") return undefined;
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : undefined;
+/** 같은 경로에서 searchParams만 바뀌는 네비게이션은 loading.tsx가 뜨지 않으므로
+ *  클릭 즉시 항목 옆에 스피너를 보여 반응성을 확보한다. (Link 내부에서만 동작) */
+function LinkPendingSpinner() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return <Loader2 size={13} className="ml-1 shrink-0 animate-spin text-(--notion-fg)/50" />;
 }
 
 interface Props {
@@ -72,16 +69,17 @@ export default function YouTubeSourceList({
     });
   };
 
-  const handleRemove = (e: React.MouseEvent, sourceId: string) => {
+  const handleRemove = async (e: React.MouseEvent, sourceId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const raw = getCookie(CUSTOM_SOURCES_COOKIE_NAME);
-    const list = getCustomSourcesFromCookie(raw);
-    const next = list.filter((s) => s.id !== sourceId);
-    document.cookie = buildCustomSourcesCookie(next);
-    fetch(`/api/custom-sources?sourceId=${encodeURIComponent(sourceId)}`, { method: "DELETE" }).catch(
-      () => {}
-    );
+    // 쿠키 갱신(Set-Cookie)은 서버가 담당하므로 응답을 기다린 뒤 새로고침해야 반영된다
+    try {
+      await fetch(`/api/custom-sources?sourceId=${encodeURIComponent(sourceId)}`, {
+        method: "DELETE",
+      });
+    } catch {
+      // 네트워크 오류 시에도 refresh로 현재 상태 재동기화
+    }
     router.refresh();
   };
 
@@ -127,6 +125,7 @@ export default function YouTubeSourceList({
                   )}
                 </div>
                 <span className="truncate">{item.name}</span>
+                <LinkPendingSpinner />
               </div>
               {hasNew && !isActive && (
                 <span className="ml-1 inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-r from-emerald-400 to-sky-400 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]" />

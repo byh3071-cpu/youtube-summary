@@ -1,10 +1,12 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { GoogleGenAI } from "@google/genai";
 import { getVideoContext } from "@/lib/video-context";
 import { getSupabaseForSummaries, type Database } from "@/lib/supabase-server";
 import { getMergedFeed } from "@/lib/feed";
+import { getSessionMergedSources } from "@/lib/merged-session-sources";
+import { generateGeminiText } from "@/lib/gemini";
+import { extractJsonObject } from "@/lib/llm-json";
 import type { FeedItem } from "@/types/feed";
 import {
   SUMMARY_PROMPT_CAPTION,
@@ -25,56 +27,17 @@ const QUALITY_THRESHOLD = 78;
 /** 미달 시 재생성 최대 횟수 (1회 생성 + 최대 2회 재생성 = 총 3회 시도) */
 const MAX_REGENERATION_ATTEMPTS = 3;
 
-/** 비용을 최소화하기 위한 기본 Gemini 모델 (Tier 1 저렴한 Flash 계열) */
-const GEMINI_MODEL_ID = "models/gemini-1.5-flash";
-
-// Removed local INSIGHT_PROMPT as it's now in @/lib/prompts
-
-async function summarizeWithGemini(prompt: string): Promise<string | null> {
-  if (!process.env.GEMINI_API_KEY) {
-    return null;
-  }
-
-  // 새 키는 v1beta API를 쓰도록 기본값 사용 (apiVersion 생략)
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  try {
-    const response = await ai.models.generateContent({
-      // 비용이 저렴한 Flash 계열 모델 사용
-      model: GEMINI_MODEL_ID,
-      contents: prompt,
-    });
-    // SDK의 .text 속성을 통해 텍스트 추출
-    return response.text || null;
-  } catch (e: unknown) {
-    const err = e as { error?: { code?: number | string }; code?: number | string; status?: number | string };
-    const code = err.error?.code ?? err.code ?? err.status;
-    // 모델 이름 이슈(404) 등으로 실패하는 경우, 조용히 null 반환해서 상위 로직이 에러 메시지만 보여주도록 함
-    if (code !== 404 && code !== "NOT_FOUND") {
-      console.error("[Summarize] Gemini generateContent failed", e);
-    }
-    return null;
-  }
+function summarizeWithGemini(prompt: string): Promise<string | null> {
+  return generateGeminiText(prompt, "Summarize");
 }
 
 type QualityEvalResult = { score: number; passed: boolean; reason?: string };
 
-async function evaluateSummaryQuality(
-  contextSnippet: string,
-  summary: string,
-): Promise<QualityEvalResult | null> {
-  if (!process.env.GEMINI_API_KEY) return null;
-  const prompt = getSummaryQualityEvalPrompt(contextSnippet, summary);
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+async function evaluateQuality(prompt: string): Promise<QualityEvalResult | null> {
+  const raw = await generateGeminiText(prompt, "QualityEval");
+  if (!raw) return null;
   try {
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL_ID,
-      contents: prompt,
-    });
-    const raw = (response.text || "").trim();
-    const start = raw.indexOf("{");
-    const end = raw.lastIndexOf("}") + 1;
-    const json = start >= 0 && end > start ? raw.slice(start, end) : raw;
-    const parsed = JSON.parse(json) as { score?: number; passed?: boolean; reason?: string };
+    const parsed = JSON.parse(extractJsonObject(raw)) as { score?: number; passed?: boolean; reason?: string };
     const score = typeof parsed.score === "number" ? parsed.score : 0;
     const passed = parsed.passed === true || score >= QUALITY_THRESHOLD;
     return { score, passed, reason: parsed.reason };
@@ -83,29 +46,18 @@ async function evaluateSummaryQuality(
   }
 }
 
-async function evaluateInsightQuality(
+function evaluateSummaryQuality(
+  contextSnippet: string,
+  summary: string,
+): Promise<QualityEvalResult | null> {
+  return evaluateQuality(getSummaryQualityEvalPrompt(contextSnippet, summary));
+}
+
+function evaluateInsightQuality(
   contextSnippet: string,
   insight: string,
 ): Promise<QualityEvalResult | null> {
-  if (!process.env.GEMINI_API_KEY) return null;
-  const prompt = getInsightQualityEvalPrompt(contextSnippet, insight);
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  try {
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL_ID,
-      contents: prompt,
-    });
-    const raw = (response.text || "").trim();
-    const start = raw.indexOf("{");
-    const end = raw.lastIndexOf("}") + 1;
-    const json = start >= 0 && end > start ? raw.slice(start, end) : raw;
-    const parsed = JSON.parse(json) as { score?: number; passed?: boolean; reason?: string };
-    const score = typeof parsed.score === "number" ? parsed.score : 0;
-    const passed = parsed.passed === true || score >= QUALITY_THRESHOLD;
-    return { score, passed, reason: parsed.reason };
-  } catch {
-    return null;
-  }
+  return evaluateQuality(getInsightQualityEvalPrompt(contextSnippet, insight));
 }
 
 type RankedItemPayload = {
@@ -284,10 +236,8 @@ function buildItemPayload(item: FeedItem, summaryText?: string | null): string {
 }
 
 function safeParseRanking(text: string): RankingResult | null {
-  const trimmed = text.trim();
-  const jsonLike = trimmed.replace(/^```json\s*/i, "").replace(/```$/i, "");
   try {
-    const parsed = JSON.parse(jsonLike) as RankingResult;
+    const parsed = JSON.parse(extractJsonObject(text)) as RankingResult;
     if (!parsed || !Array.isArray(parsed.items)) return null;
     return {
       items: parsed.items
@@ -307,7 +257,10 @@ function safeParseRanking(text: string): RankingResult | null {
   }
 }
 
-export async function rankFeedByGoalsAction(goals: string, limit: number = 20) {
+/** 브리핑 랭킹 후보 수 기본값이자 상한 (PRD: 최신순 상위 50개) */
+const BRIEFING_CANDIDATES_CAP = 50;
+
+export async function rankFeedByGoalsAction(goals: string, limit?: number) {
   if (!process.env.GEMINI_API_KEY) {
     return { error: ".env.local 파일에 GEMINI_API_KEY 설정이 필요합니다." };
   }
@@ -316,6 +269,12 @@ export async function rankFeedByGoalsAction(goals: string, limit: number = 20) {
   if (!goalText) {
     return { error: "먼저 상단의 My Focus 영역에 목표/관심사를 입력해 주세요." };
   }
+
+  // server action은 외부에서 임의 인자로 호출될 수 있으므로 후보 수를 강제 클램프
+  const candidateCount =
+    typeof limit === "number" && Number.isFinite(limit) && limit >= 1
+      ? Math.min(Math.trunc(limit), BRIEFING_CANDIDATES_CAP)
+      : BRIEFING_CANDIDATES_CAP;
 
   const burst = await guardGeminiActionRateLimit("briefing");
   if (!burst.ok) {
@@ -330,12 +289,14 @@ export async function rankFeedByGoalsAction(goals: string, limit: number = 20) {
 
   const summariesTable = getSupabaseForSummaries();
 
-  const { items } = await getMergedFeed();
+  // 사용자 커스텀 소스(쿠키·DB)를 반영해 홈 피드와 동일한 후보군 사용
+  const mergedSources = await getSessionMergedSources();
+  const { items } = await getMergedFeed(mergedSources);
   if (!items || items.length === 0) {
     return { error: "추천할 피드 아이템이 없습니다. 잠시 후 다시 시도해 주세요." };
   }
 
-  const candidates = items.slice(0, limit);
+  const candidates = items.slice(0, candidateCount);
 
   let summariesMap = new Map<string, string>();
   if (summariesTable) {
@@ -357,7 +318,7 @@ export async function rankFeedByGoalsAction(goals: string, limit: number = 20) {
   );
 
   const systemGoal = getSystemGoalPrompt(goalText);
-  const prompt = getRankingPrompt(systemGoal, itemsPayload, limit);
+  const prompt = getRankingPrompt(systemGoal, itemsPayload, candidateCount);
 
   try {
     const raw = await summarizeWithGemini(prompt);

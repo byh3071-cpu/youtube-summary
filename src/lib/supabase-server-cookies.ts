@@ -8,6 +8,8 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export type CookieStore = {
   getAll(): { name: string; value: string }[];
+  /** 라우트 핸들러·서버 액션의 cookies()는 쓰기 가능. 서버 컴포넌트는 없거나 throw. */
+  set?: (name: string, value: string, options?: Record<string, unknown>) => void;
 };
 
 /**
@@ -23,25 +25,47 @@ export function createServerSupabaseFromCookies(
       getAll() {
         return cookieStore.getAll();
       },
-      setAll() {
-        // API/페이지에서 세션 갱신 시 쿠키 쓰기 필요 시 구현
+      setAll(cookiesToSet) {
+        // 세션 갱신 시 회전된 토큰을 영속화. 서버 컴포넌트에서는 쿠키 쓰기가
+        // 불가(throw)하므로 무시 — 그 경우 src/middleware.ts가 갱신을 담당한다.
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set?.(name, value, options as Record<string, unknown>),
+          );
+        } catch {
+          // noop
+        }
       },
     },
   });
 }
 
+type AuthUser = NonNullable<
+  Awaited<ReturnType<SupabaseClient["auth"]["getUser"]>>["data"]["user"]
+>;
+
+/** 같은 요청(cookieStore 인스턴스)에서 getUser 네트워크 호출을 1회로 줄이는 메모 */
+const userPromiseCache = new WeakMap<CookieStore, Promise<AuthUser | null>>();
+
 /**
  * 쿠키에서 현재 로그인 유저 반환. 비로그인이면 null.
+ * 같은 요청 내 반복 호출은 메모이제이션된다 (cookies()는 요청당 동일 인스턴스).
  */
-export async function getCurrentUserFromCookies(cookieStore: CookieStore) {
-  const supabase = createServerSupabaseFromCookies(cookieStore);
-  if (!supabase) return null;
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
+export function getCurrentUserFromCookies(cookieStore: CookieStore): Promise<AuthUser | null> {
+  const cached = userPromiseCache.get(cookieStore);
+  if (cached) return cached;
+  const promise = (async () => {
+    const supabase = createServerSupabaseFromCookies(cookieStore);
+    if (!supabase) return null;
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (error || !user) return null;
+    return user;
+  })();
+  userPromiseCache.set(cookieStore, promise);
+  return promise;
 }
 
 /**

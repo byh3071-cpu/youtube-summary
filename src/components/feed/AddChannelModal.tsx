@@ -7,10 +7,8 @@ import { ModalTransition } from "@/components/ui/ModalTransition";
 import {
   CUSTOM_SOURCES_COOKIE_NAME,
   getCustomSourcesFromCookie,
-  buildCustomSourcesCookie,
 } from "@/lib/custom-sources-cookie";
 import { FEED_CATEGORIES } from "@/lib/sources";
-import type { FeedSource } from "@/lib/sources";
 import type { FeedCategory } from "@/types/feed";
 
 function getCookie(name: string): string | undefined {
@@ -65,15 +63,7 @@ export default function AddChannelModal({
         setError("이미 추가된 채널입니다.");
         return;
       }
-      const newSource: FeedSource = {
-        id: channelId,
-        name: channelName,
-        type: "YouTube",
-        category,
-        avatarUrl,
-      };
-      const updated = [...existing, newSource];
-      document.cookie = buildCustomSourcesCookie(updated);
+      // 쿠키·DB 저장은 모두 서버가 담당 (Set-Cookie 단일 쓰기 경로)
       const syncRes = await fetch("/api/custom-sources", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,7 +75,9 @@ export default function AddChannelModal({
         }),
       });
       if (!syncRes.ok) {
-        console.warn("[AddChannelModal] custom source DB sync failed", await syncRes.text());
+        const failed = (await syncRes.json().catch(() => null)) as { error?: string } | null;
+        setError(failed?.error ?? "채널 저장에 실패했습니다. 다시 시도해 주세요.");
+        return;
       }
       onAdded?.();
       onClose();

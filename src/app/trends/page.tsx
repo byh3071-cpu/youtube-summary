@@ -1,7 +1,7 @@
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import { getMergedFeed } from "@/lib/feed";
-import { getSessionMergedSources, getSessionCustomSourceIds } from "@/lib/merged-session-sources";
+import { getSessionSourcesBundle } from "@/lib/merged-session-sources";
 import { getTrendRadar } from "@/app/actions/trend";
 import type { FeedItem } from "@/types/feed";
 import TrendDashboard from "./TrendDashboard";
@@ -31,10 +31,9 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
   const sp = await searchParams;
   const forceRefresh = sp?.refresh === "1";
 
-  const mergedSources = await getSessionMergedSources();
+  const { mergedSources, customSourceIds: customYouTubeSourceIds } = await getSessionSourcesBundle();
   const { items, sourceStatus } = await getMergedFeed(mergedSources);
   const youtubeSources = mergedSources.filter((s) => s.type === "YouTube");
-  const customYouTubeSourceIds = await getSessionCustomSourceIds();
   const latestVideoBySource = buildLatestVideoMap(items);
 
   const radar = await getTrendRadar(forceRefresh);

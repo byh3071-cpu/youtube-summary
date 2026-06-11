@@ -1,8 +1,7 @@
-import { GoogleGenAI } from "@google/genai";
+import { generateGeminiText } from "./gemini";
+import { extractJsonObject } from "./llm-json";
 import type { StructuredVideoContext, TranscriptLine } from "./video-transcript";
 import { formatTimestamp } from "./video-transcript";
-
-const ANALYZER_MODEL_ID = "models/gemini-1.5-flash";
 
 export const RESOURCE_CATEGORIES = [
   "직무",
@@ -157,12 +156,8 @@ function buildPrompt(args: {
 }
 
 function safeParseAnalysis(raw: string): VideoAnalysis | null {
-  const trimmed = raw.trim().replace(/^```json\s*/i, "").replace(/```$/i, "");
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}") + 1;
-  if (start < 0 || end <= start) return null;
   try {
-    const parsed = JSON.parse(trimmed.slice(start, end)) as Partial<VideoAnalysis>;
+    const parsed = JSON.parse(extractJsonObject(raw)) as Partial<VideoAnalysis>;
     if (
       typeof parsed.headline !== "string" ||
       typeof parsed.summary !== "string" ||
@@ -225,19 +220,8 @@ export async function analyzeVideoForNotion(args: {
   context: StructuredVideoContext;
   hint?: BriefingHint;
 }): Promise<VideoAnalysis | null> {
-  if (!process.env.GEMINI_API_KEY) return null;
   const prompt = buildPrompt(args);
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  try {
-    const response = await ai.models.generateContent({
-      model: ANALYZER_MODEL_ID,
-      contents: prompt,
-    });
-    const raw = response.text || "";
-    if (!raw) return null;
-    return safeParseAnalysis(raw);
-  } catch (e) {
-    console.error("[NotionSectionAnalyzer] Gemini failed", e);
-    return null;
-  }
+  const raw = await generateGeminiText(prompt, "NotionSectionAnalyzer");
+  if (!raw) return null;
+  return safeParseAnalysis(raw);
 }

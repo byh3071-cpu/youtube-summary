@@ -1,7 +1,8 @@
 "use server";
 
-import { GoogleGenAI } from "@google/genai";
 import { getMergedFeed } from "@/lib/feed";
+import { generateGeminiText } from "@/lib/gemini";
+import { extractJsonObject } from "@/lib/llm-json";
 import type { FeedItem } from "@/types/feed";
 import { getTrendRadarPrompt } from "@/lib/prompts";
 import { getTypedTable } from "@/lib/supabase-server";
@@ -22,12 +23,7 @@ export type TrendRadarResult = {
 const TREND_BUCKET_LATEST_24H = "latest_24h_all";
 const TREND_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-/** 트렌드 레이더에서도 비용을 최소화하기 위해 동일한 Flash 계열 모델 사용 */
-const GEMINI_TREND_MODEL_ID = "models/gemini-1.5-flash";
-
 async function callGeminiForTrends(items: FeedItem[]): Promise<TrendRadarItem[] | null> {
-  if (!process.env.GEMINI_API_KEY) return null;
-
   const payload = items.map((item) =>
     JSON.stringify({
       id: item.id || item.link,
@@ -40,47 +36,11 @@ async function callGeminiForTrends(items: FeedItem[]): Promise<TrendRadarItem[] 
   );
 
   const prompt = getTrendRadarPrompt(payload);
-
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  async function generateWithModel(model: string) {
-    const res = await ai.models.generateContent({
-      model,
-      contents: prompt,
-    });
-    return res.text || "";
-  }
-
-  let raw = "";
-  try {
-    // 1. 비용이 저렴한 Flash 계열 기본 모델 사용
-    raw = await generateWithModel(GEMINI_TREND_MODEL_ID);
-  } catch (e: unknown) {
-    const err = e as { error?: { code?: number | string }; code?: number | string; status?: number | string };
-    const code = err.error?.code ?? err.code ?? err.status;
-    // 404 등으로 모델을 못 쓰는 경우, 보다 보편적인 모델로 폴백 시도
-    if (code === 404 || code === "NOT_FOUND") {
-      try {
-        raw = await generateWithModel("models/gemini-flash-latest");
-      } catch (e2: unknown) {
-        const err2 = e2 as { error?: { code?: number | string }; code?: number | string; status?: number | string };
-        const code2 = err2.error?.code ?? err2.code ?? err2.status;
-        // 두 번째 모델도 NOT_FOUND면, 현재 프로젝트에서 Gemini가 비활성화된 것으로 보고 조용히 기능을 끔
-        if (code2 !== 404 && code2 !== "NOT_FOUND") {
-          console.error("[TrendRadar] Gemini fallback failed", e2);
-        }
-        return null;
-      }
-    } else {
-      console.error("[TrendRadar] Gemini generateContent failed", e);
-      return null;
-    }
-  }
-
-  const trimmed = raw.trim();
-  const jsonLike = trimmed.replace(/^```json\s*/i, "").replace(/```$/i, "");
+  const raw = await generateGeminiText(prompt, "TrendRadar");
+  if (!raw) return null;
 
   try {
-    const parsed = JSON.parse(jsonLike) as { trends?: TrendRadarItem[] };
+    const parsed = JSON.parse(extractJsonObject(raw)) as { trends?: TrendRadarItem[] };
     if (!parsed || !Array.isArray(parsed.trends)) return null;
     return parsed.trends
       .filter(
@@ -128,6 +88,8 @@ export async function getTrendRadar(forceRefresh = false): Promise<TrendRadarRes
   }
 
   // 2) 최신 피드 수집 (24시간 이내)
+  // 트렌드 캐시는 전역 버킷으로 모든 사용자가 공유하므로, 특정 사용자의
+  // 커스텀 소스가 섞이지 않도록 의도적으로 기본 소스만 사용한다.
   const { items } = await getMergedFeed();
   if (!items || items.length === 0) return null;
 

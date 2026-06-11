@@ -7,8 +7,6 @@ import { ModalTransition } from "@/components/ui/ModalTransition";
 import {
   CUSTOM_SOURCES_COOKIE_NAME,
   getCustomSourcesFromCookie,
-  buildCustomSourcesCookie,
-  mergeCustomSources,
 } from "@/lib/custom-sources-cookie";
 import type { FeedSource } from "@/lib/sources";
 
@@ -60,7 +58,7 @@ export default function SourceExportImport() {
     URL.revokeObjectURL(url);
   };
 
-  const handleImportConfirm = () => {
+  const handleImportConfirm = async () => {
     setImportError(null);
     const text = importText.trim();
     if (!text) {
@@ -72,10 +70,22 @@ export default function SourceExportImport() {
       setImportError("올바른 채널 목록 형식이 아닙니다. 내보낸 JSON 파일 내용을 붙여넣어 주세요.");
       return;
     }
-    const raw = getCookie(CUSTOM_SOURCES_COOKIE_NAME);
-    const existing = getCustomSourcesFromCookie(raw);
-    const merged = mergeCustomSources(existing, parsed);
-    document.cookie = buildCustomSourcesCookie(merged);
+    // 병합·쿠키 갱신·DB 저장은 서버가 담당 (Set-Cookie 단일 쓰기 경로)
+    try {
+      const res = await fetch("/api/custom-sources", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed),
+      });
+      if (!res.ok) {
+        const failed = (await res.json().catch(() => null)) as { error?: string } | null;
+        setImportError(failed?.error ?? "가져오기에 실패했습니다. 다시 시도해 주세요.");
+        return;
+      }
+    } catch {
+      setImportError("연결 오류로 가져오기에 실패했습니다. 다시 시도해 주세요.");
+      return;
+    }
     setImportOpen(false);
     setImportText("");
     setImportError(null);
