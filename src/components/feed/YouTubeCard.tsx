@@ -8,6 +8,7 @@ import AddToRadioButton from "./AddToRadioButton";
 import BookmarkButton from "./BookmarkButton";
 import SummarizeButton from "./SummarizeButton";
 import InsightButton from "./InsightButton";
+import { DeepDiveButton } from "./VideoDigestDrawer";
 import type { BookmarkEntry } from "./FeedClientContainer";
 import { getWatchProgress } from "@/lib/watch-history";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
@@ -193,6 +194,14 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange }: Props)
       </a>
       {item.id && (
         <div className="flex shrink-0 items-center justify-end gap-1 px-0 pb-1 pt-0.5">
+          <div className="mr-auto">
+            <DeepDiveButton
+              videoId={item.id}
+              title={item.title}
+              channel={item.sourceName}
+              durationSeconds={item.durationSeconds ?? null}
+            />
+          </div>
           {onBookmarkChange && (
             <BookmarkButton
               videoId={item.id}

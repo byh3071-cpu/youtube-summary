@@ -1,4 +1,5 @@
 import { YoutubeTranscript } from "youtube-transcript";
+import { Innertube } from "youtubei.js";
 import { getVideoSnippet } from "@/lib/youtube";
 
 export interface TranscriptLine {
@@ -29,32 +30,75 @@ export function formatTimestamp(seconds: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+/** youtubei.js Innertube 인스턴스 싱글톤 (생성 비용이 있어 재사용) */
+let innertubePromise: Promise<Innertube> | null = null;
+function getInnertube(): Promise<Innertube> {
+  if (!innertubePromise) {
+    innertubePromise = Innertube.create({ lang: "ko", retrieve_player: false });
+  }
+  return innertubePromise;
+}
+
+/** youtube-transcript 라이브러리 경로 (YouTube 변경으로 자주 깨짐 — 1차 시도용) */
+async function fetchLinesViaLegacyLib(videoId: string): Promise<TranscriptLine[]> {
+  const raw = await YoutubeTranscript.fetchTranscript(videoId);
+  return raw
+    .map((t) => ({
+      text: (t.text ?? "").trim(),
+      offset: normalizeOffsetSeconds(t.offset ?? 0),
+    }))
+    .filter((line) => line.text.length > 0);
+}
+
+/** InnerTube(youtubei.js) 경로 — 공식 웹 클라이언트와 동일한 API라 견고함 */
+async function fetchLinesViaInnertube(videoId: string): Promise<TranscriptLine[]> {
+  const yt = await getInnertube();
+  const info = await yt.getInfo(videoId);
+  const transcriptData = await info.getTranscript();
+  const segments = transcriptData?.transcript?.content?.body?.initial_segments ?? [];
+  const lines: TranscriptLine[] = [];
+  for (const seg of segments) {
+    const text = (seg?.snippet?.text?.toString() ?? "").trim();
+    if (!text) continue;
+    const startMs = Number(seg?.start_ms ?? 0);
+    lines.push({ text, offset: Number.isFinite(startMs) ? startMs / 1000 : 0 });
+  }
+  return lines;
+}
+
+/**
+ * 자막 줄 가져오기 — legacy 라이브러리 → InnerTube 순서로 시도.
+ * 둘 다 실패하면 빈 배열 (호출부가 snippet 폴백).
+ * video-context.ts(요약·인사이트)와 공유한다.
+ */
+export async function fetchTranscriptLines(videoId: string): Promise<TranscriptLine[]> {
+  try {
+    const lines = await fetchLinesViaLegacyLib(videoId);
+    if (lines.length > 0) return lines;
+  } catch {
+    // legacy 라이브러리는 YouTube 변경으로 상시 깨질 수 있음 — InnerTube로 폴백
+  }
+  try {
+    return await fetchLinesViaInnertube(videoId);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    // 자막이 정말 없는 영상이면 조용히, 그 외는 한 번 로그
+    if (!/transcript/i.test(msg)) {
+      console.error("[Transcript] Innertube fetch failed:", msg);
+    }
+    return [];
+  }
+}
+
 export async function getStructuredVideoContext(
   videoId: string,
 ): Promise<StructuredVideoContext> {
   try {
-    try {
-      const raw = await YoutubeTranscript.fetchTranscript(videoId);
-      const lines: TranscriptLine[] = raw
-        .map((t) => ({
-          text: (t.text ?? "").trim(),
-          offset: normalizeOffsetSeconds(t.offset ?? 0),
-        }))
-        .filter((line) => line.text.length > 0);
-
-      if (lines.length > 0) {
-        const joined = lines.map((l) => l.text).join(" ").trim();
-        if (joined.length >= 10) {
-          return { mode: "transcript", lines, joined };
-        }
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (
-        !msg.includes("Transcript is disabled") &&
-        !msg.includes("transcript")
-      ) {
-        throw e;
+    const lines = await fetchTranscriptLines(videoId);
+    if (lines.length > 0) {
+      const joined = lines.map((l) => l.text).join(" ").trim();
+      if (joined.length >= 10) {
+        return { mode: "transcript", lines, joined };
       }
     }
 

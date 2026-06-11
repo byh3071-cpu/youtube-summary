@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>딥다이브 UI 비교 — Focus Feed</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #37352f; --border: #e9e9e7; --gray: #f1f1ef;
+    --hover: #efefee; --accent: #2383e2; --dim: rgba(55,53,47,0.65);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; background: var(--gray); color: var(--fg); padding: 24px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: var(--dim); margin-bottom: 20px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-size: 13px; font-weight: 600; }
+  .tab.active { background: var(--fg); color: var(--bg); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .frame { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; max-width: 1100px; margin: 0 auto 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+  .frame-title { padding: 10px 16px; font-size: 12px; font-weight: 700; color: var(--dim); border-bottom: 1px solid var(--border); background: var(--gray); }
+  .chip { display: inline-block; padding: 3px 10px; border-radius: 999px; background: rgba(35,131,226,0.1); color: var(--accent); font-size: 12px; font-weight: 600; margin: 2px; cursor: pointer; border: 1px solid rgba(35,131,226,0.25); }
+  .chip:hover { background: rgba(35,131,226,0.2); }
+  .ts { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--gray); color: var(--accent); font-size: 11px; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .ts:hover { background: rgba(35,131,226,0.15); }
+  .headline { font-size: 17px; font-weight: 700; padding: 14px 16px; background: rgba(255,212,0,0.12); border-radius: 12px; margin-bottom: 12px; }
+  .core { font-size: 13px; color: var(--dim); padding: 0 4px 12px; line-height: 1.6; }
+  .sec-title { font-size: 12px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; margin: 16px 0 8px; }
+  .insight { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; font-size: 13px; line-height: 1.6; }
+  .insight .ev { display: block; margin-top: 4px; font-size: 12px; color: var(--dim); }
+  .quote { border-left: 3px solid var(--accent); padding: 6px 12px; margin: 8px 0; font-size: 13px; font-style: italic; color: var(--dim); line-height: 1.6; }
+  .timeline { font-size: 13px; line-height: 2; }
+  .timeline li { list-style: none; margin-bottom: 6px; }
+  .timeline b { font-weight: 600; }
+  .points { font-size: 12px; color: var(--dim); padding-left: 58px; line-height: 1.7; }
+  .action { font-size: 13px; padding: 6px 0; }
+  .transcript { font-size: 12px; line-height: 1.9; color: var(--dim); max-height: 260px; overflow-y: auto; padding: 12px; background: var(--gray); border-radius: 10px; }
+  .toggle-label { font-size: 13px; font-weight: 600; cursor: pointer; padding: 8px 0; display: block; }
+  /* 드로어 시뮬레이션 */
+  .feedbg { position: relative; min-height: 660px; background: var(--gray); padding: 20px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; filter: blur(1.5px); opacity: 0.55; }
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .thumb { height: 90px; background: linear-gradient(135deg, #c9d6ff, #e2e2e2); }
+  .card .t { padding: 10px; font-size: 12px; font-weight: 600; line-height: 1.4; }
+  .drawer { position: absolute; top: 24px; right: 24px; bottom: 24px; width: 460px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; box-shadow: -8px 0 40px rgba(0,0,0,0.18); padding: 18px; overflow-y: auto; }
+  .drawer-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .drawer-head .x { cursor: pointer; color: var(--dim); font-size: 18px; }
+  .vtitle { font-size: 14px; font-weight: 700; line-height: 1.4; }
+  /* 페이지 시뮬레이션 */
+  .pagewrap { display: grid; grid-template-columns: 340px 1fr; min-height: 660px; }
+  .left { border-right: 1px solid var(--border); padding: 16px; background: var(--gray); overflow-y: auto; max-height: 660px; }
+  .right { padding: 20px 24px; overflow-y: auto; max-height: 660px; }
+  .back { font-size: 12px; color: var(--dim); margin-bottom: 10px; cursor: pointer; }
+  .tline { padding: 3px 0; font-size: 12px; line-height: 1.7; color: var(--dim); }
+  .tline:hover { background: rgba(35,131,226,0.07); border-radius: 6px; }
+  /* 카드 버튼 비교 */
+  .btnrow { display: flex; gap: 6px; padding: 0 10px 10px; flex-wrap: wrap; }
+  .cbtn { font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; }
+  .cbtn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .compare2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; }
+  .bigcard { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; width: 100%; }
+  .bigthumb { height: 150px; background: linear-gradient(135deg, #c9d6ff, #e2e2e2); }
+  .bigcard .t { padding: 12px; font-size: 14px; font-weight: 600; }
+  .note { font-size: 12px; color: var(--dim); padding: 12px 16px; line-height: 1.7; }
+  .pill-note { display: inline-block; background: rgba(255,212,0,0.2); border-radius: 6px; padding: 1px 6px; font-size: 11px; }
+  .summary-open { margin: 0 10px 10px; padding: 10px; background: var(--gray); border-radius: 8px; font-size: 12px; line-height: 1.6; color: var(--dim); }
+</style>
+</head>
+<body>
+<h1>📖 딥다이브 UI 비교</h1>
+<p class="sub">탭을 눌러 4가지 화면을 비교해 보세요. 타임스탬프·키워드 칩은 실제 동작 느낌만 시뮬레이션됩니다(클릭 시 알림).</p>
+
+<div class="tabs">
+  <button class="tab active" data-p="p1">결정A-① 드로어형</button>
+  <button class="tab" data-p="p2">결정A-② 전용 페이지형</button>
+  <button class="tab" data-p="p3">결정B-① 버튼 병행 유지</button>
+  <button class="tab" data-p="p4">결정B-② 딥다이브 통합</button>
+</div>
+
+<!-- ===== A-1 드로어 ===== -->
+<div class="panel active" id="p1">
+  <div class="frame">
+    <div class="frame-title">결정A-① 드로어형 — 피드 위에 오버레이로 열림 (흐름 유지, 빠른 진입/이탈)</div>
+    <div class="feedbg">
+      <div class="cards">
+        <div class="card"><div class="thumb"></div><div class="t">Claude Code로 에이전트 만들기</div></div>
+        <div class="card"><div class="thumb"></div><div class="t">1인 SaaS 마케팅 전략 7가지</div></div>
+        <div class="card"><div class="thumb"></div><div class="t">GPT-5.4 출시 총정리</div></div>
+        <div class="card"><div class="thumb"></div><div class="t">노션 자동화 워크플로우</div></div>
+        <div class="card"><div class="thumb"></div><div class="t">개발자가 알아야 할 AI 트렌드</div></div>
+        <div class="card"><div class="thumb"></div><div class="t">MCP 서버 실전 구축</div></div>
+      </div>
+      <div class="drawer">
+        <div class="drawer-head">
+          <span class="vtitle">Claude Code로 자동화 에이전트 만들기 — 실전 1시간 강의</span>
+          <span class="x">✕</span>
+        </div>
+        <div class="headline">💡 에이전트의 핵심은 모델이 아니라 "피드백 루프 설계"다</div>
+        <p class="core"><b>핵심 가치:</b> 코드 한 줄 없이도 도구 연결·검증 루프만 잘 짜면 실무 자동화의 80%를 해결할 수 있음을 1시간 실습으로 증명하는 영상.</p>
+        <div class="sec-title">🔑 핵심 인사이트</div>
+        <div class="insight">1. 에이전트 실패의 90%는 프롬프트가 아니라 도구 권한 설계에서 온다 <span class="ev">근거: "권한을 좁히면 모델이 알아서 똑똑해집니다" <span class="ts" onclick="alert('라디오 12:34부터 재생')">12:34</span></span></div>
+        <div class="insight">2. 검증 단계를 에이전트 안에 넣으면 재시도 비용이 1/5로 준다 <span class="ev">근거: 실측 데모 — 실패율 42%→8% <span class="ts" onclick="alert('라디오 31:02부터 재생')">31:02</span></span></div>
+        <div class="sec-title">💬 엑기스 (인용)</div>
+        <div class="quote">"자동화는 사람을 대체하는 게 아니라, 사람이 검토할 가치가 있는 것만 남기는 일입니다" <span class="ts" onclick="alert('라디오 47:21부터 재생')">47:21</span></div>
+        <div class="sec-title">🏷 키워드 <span style="font-weight:400; text-transform:none;">(클릭 → 피드 필터에 추가)</span></div>
+        <div>
+          <span class="chip" onclick="alert('피드 필터에 \'에이전트\' 추가됨')">에이전트</span>
+          <span class="chip" onclick="alert('피드 필터에 \'Claude Code\' 추가됨')">Claude Code</span>
+          <span class="chip">피드백 루프</span><span class="chip">도구 권한</span><span class="chip">MCP</span><span class="chip">자동화 ROI</span>
+        </div>
+        <div class="sec-title">📑 섹션 타임라인</div>
+        <ul class="timeline">
+          <li><span class="ts" onclick="alert('라디오 00:00부터 재생')">00:00</span> <b>왜 에이전트인가</b></li>
+          <li><span class="ts" onclick="alert('라디오 12:30부터 재생')">12:30</span> <b>도구 권한 설계 원칙</b></li>
+          <li><span class="ts" onclick="alert('라디오 31:00부터 재생')">31:00</span> <b>검증 루프 실습</b></li>
+          <li><span class="ts" onclick="alert('라디오 47:10부터 재생')">47:10</span> <b>실무 적용 Q&A</b></li>
+          <li><span class="ts" onclick="alert('라디오 55:40부터 재생')">55:40</span> <b>비용 최적화 팁</b></li>
+        </ul>
+        <div class="sec-title">✅ 이번 주 액션</div>
+        <div class="action">· 내 반복 업무 1개를 골라 권한 최소화 에이전트로 시험 구축</div>
+        <div class="action">· 검증 단계(스키마 체크)를 기존 자동화에 1개 추가</div>
+        <label class="toggle-label" onclick="var t=document.getElementById('tr1'); t.style.display=t.style.display==='none'?'block':'none'">▸ 자막 전문 보기 (1:02:11)</label>
+        <div class="transcript" id="tr1" style="display:none">
+          <div>[00:00] 안녕하세요, 오늘은 클로드 코드로 에이전트를...</div>
+          <div>[00:12] 많은 분들이 모델 성능부터 보시는데요...</div>
+          <div>[00:31] 사실 가장 중요한 건 피드백 루프입니다...</div>
+          <div>[01:02] 먼저 권한 설계 얘기부터 해볼게요...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note">✅ 장점: 피드 탐색 흐름이 안 끊김 · 기존 드로어 패턴 재사용으로 구현 빠름 · 모바일에서 바텀시트로 자연 변환<br>⚠️ 단점: 좁은 폭(트랜스크립트는 토글로) · URL 공유/딥링크 불가</p>
+</div>
+
+<!-- ===== A-2 전용 페이지 ===== -->
+<div class="panel" id="p2">
+  <div class="frame">
+    <div class="frame-title">결정A-② 전용 페이지형 /video/[id] — NotebookLM식 2단 (좌 트랜스크립트 / 우 디제스트)</div>
+    <div class="pagewrap">
+      <div class="left">
+        <div class="back">◀ 피드로 돌아가기</div>
+        <div class="sec-title">📝 자막 전문 (1:02:11)</div>
+        <div class="tline"><span class="ts">00:00</span> 안녕하세요, 오늘은 클로드 코드로 에이전트를 만드는 법을...</div>
+        <div class="tline"><span class="ts">00:12</span> 많은 분들이 모델 성능부터 보시는데요, 사실...</div>
+        <div class="tline"><span class="ts">00:31</span> 가장 중요한 건 피드백 루프입니다. 왜냐하면...</div>
+        <div class="tline"><span class="ts">01:02</span> 먼저 권한 설계 얘기부터 해볼게요...</div>
+        <div class="tline"><span class="ts">01:45</span> 도구를 무제한으로 주면 어떻게 되냐면...</div>
+        <div class="tline"><span class="ts">02:20</span> 실제 사례를 보여드리겠습니다...</div>
+        <div class="tline" style="opacity:.5">… (스크롤로 전체 자막, 클릭 시 해당 구간 재생)</div>
+      </div>
+      <div class="right">
+        <div class="vtitle" style="font-size:16px; margin-bottom:10px;">Claude Code로 자동화 에이전트 만들기 — 실전 1시간 강의</div>
+        <div class="headline">💡 에이전트의 핵심은 모델이 아니라 "피드백 루프 설계"다</div>
+        <p class="core"><b>핵심 가치:</b> 도구 연결·검증 루프만 잘 짜면 실무 자동화의 80%를 해결할 수 있음을 실습으로 증명.</p>
+        <div class="sec-title">🔑 핵심 인사이트</div>
+        <div class="insight">1. 에이전트 실패의 90%는 도구 권한 설계에서 온다 <span class="ev">"권한을 좁히면 모델이 알아서 똑똑해집니다" <span class="ts">12:34</span></span></div>
+        <div class="insight">2. 검증 단계 내장 시 재시도 비용 1/5 <span class="ev">실패율 42%→8% 실측 <span class="ts">31:02</span></span></div>
+        <div class="insight">3. 비용 최적화는 캐시가 아니라 "호출 안 하기"에서 시작 <span class="ev"><span class="ts">55:48</span></span></div>
+        <div class="sec-title">💬 엑기스</div>
+        <div class="quote">"자동화는 사람을 대체하는 게 아니라, 사람이 검토할 가치가 있는 것만 남기는 일입니다" <span class="ts">47:21</span></div>
+        <div class="sec-title">🏷 키워드</div>
+        <div><span class="chip">에이전트</span><span class="chip">Claude Code</span><span class="chip">피드백 루프</span><span class="chip">도구 권한</span><span class="chip">MCP</span><span class="chip">자동화 ROI</span></div>
+        <div class="sec-title">📑 섹션</div>
+        <ul class="timeline">
+          <li><span class="ts">00:00</span> <b>왜 에이전트인가</b></li>
+          <li><span class="ts">12:30</span> <b>도구 권한 설계 원칙</b><div class="points">권한 최소화 3원칙 · 실패 사례 분석</div></li>
+          <li><span class="ts">31:00</span> <b>검증 루프 실습</b><div class="points">스키마 체크 데모 · 재시도 비용 실측</div></li>
+          <li><span class="ts">47:10</span> <b>실무 적용 Q&A</b></li>
+          <li><span class="ts">55:40</span> <b>비용 최적화 팁</b></li>
+        </ul>
+        <div class="sec-title">✅ 액션 · ❓ 열린 질문</div>
+        <div class="action">· 반복 업무 1개를 권한 최소화 에이전트로 시험 구축</div>
+        <div class="action" style="color:var(--dim)">❓ 멀티 에이전트 협업에서도 같은 원칙이 유효한가?</div>
+      </div>
+    </div>
+  </div>
+  <p class="note">✅ 장점: 트랜스크립트·디제스트 동시 노출(NotebookLM 감성) · URL 공유/북마크 가능 · 화면 넓음<br>⚠️ 단점: 페이지 이동으로 피드 흐름 끊김 · 모바일은 결국 1단 세로 스택 · 구현 비용 큼(라우트+레이아웃+모바일 대응)</p>
+</div>
+
+<!-- ===== B-1 병행 유지 ===== -->
+<div class="panel" id="p3">
+  <div class="compare2">
+    <div>
+      <div class="frame" style="margin-bottom:8px">
+        <div class="frame-title">결정B-① 병행 유지 — 카드 모습</div>
+        <div class="bigcard">
+          <div class="bigthumb"></div>
+          <div class="t">Claude Code로 자동화 에이전트 만들기 — 실전 1시간 강의</div>
+          <div class="btnrow">
+            <button class="cbtn" onclick="alert('기존 3줄 요약 (Gemini 1콜, 빠름)')">⚡ AI 요약</button>
+            <button class="cbtn" onclick="alert('기존 인사이트 (Gemini 1콜)')">💡 인사이트</button>
+            <button class="cbtn primary" onclick="alert('딥다이브 열림 (전체 자막 기반, 5~7콜, 캐시됨)')">📖 딥다이브</button>
+            <button class="cbtn">🎧 라디오</button>
+          </div>
+          <div class="summary-open">⚡ <b>AI 요약(기존 그대로):</b> ① 에이전트 실패는 권한 설계 문제 ② 검증 루프로 비용 절감 ③ 작게 시작해 확장하라</div>
+        </div>
+      </div>
+      <p class="note">✅ 가볍게 훑을 땐 1콜짜리 요약, 파고들 땐 딥다이브 — <span class="pill-note">비용·속도 용도 구분</span><br>✅ 라디오 요약 등 기존 의존 기능 무수정 · 구현 리스크 최소<br>⚠️ 카드에 버튼 4개 — 다소 복잡</p>
+    </div>
+    <div>
+      <div class="frame" style="margin-bottom:8px">
+        <div class="frame-title">참고 — 모바일에서의 병행 배치</div>
+        <div class="bigcard" style="max-width:300px; margin:16px auto;">
+          <div class="bigthumb" style="height:110px"></div>
+          <div class="t" style="font-size:13px">Claude Code로 자동화 에이전트 만들기</div>
+          <div class="btnrow">
+            <button class="cbtn">⚡ 요약</button>
+            <button class="cbtn">💡</button>
+            <button class="cbtn primary">📖 딥다이브</button>
+            <button class="cbtn">🎧</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">모바일은 아이콘 축약으로 4버튼 수용 가능</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== B-2 통합 ===== -->
+<div class="panel" id="p4">
+  <div class="compare2">
+    <div>
+      <div class="frame" style="margin-bottom:8px">
+        <div class="frame-title">결정B-② 딥다이브 통합 — 카드 모습</div>
+        <div class="bigcard">
+          <div class="bigthumb"></div>
+          <div class="t">Claude Code로 자동화 에이전트 만들기 — 실전 1시간 강의</div>
+          <div class="btnrow">
+            <button class="cbtn primary" onclick="alert('딥다이브 열림 — 요약·인사이트·인용·키워드 전부 이 안에')">📖 딥다이브</button>
+            <button class="cbtn">🎧 라디오</button>
+          </div>
+          <div class="summary-open">카드가 깔끔해지고 AI 진입점이 하나로 통일됨.<br>요약·인사이트는 딥다이브 화면 안의 첫 화면으로 흡수.</div>
+        </div>
+      </div>
+      <p class="note">✅ UI 단순 · AI 기능의 단일 관문<br>⚠️ "제목만 보고 3줄만 빠르게" 용도가 사라짐 — 가볍게 훑을 때도 <span class="pill-note">전체 파이프라인(5~7콜) 또는 캐시 필요</span><br>⚠️ SummarizeButton·InsightButton 제거 → 라디오 가사뷰 등 의존 기능 재배선 필요(수정 범위 큼)</p>
+    </div>
+    <div>
+      <div class="frame" style="margin-bottom:8px">
+        <div class="frame-title">통합 시 딥다이브 첫 화면(요약 탭 흡수 예)</div>
+        <div style="padding:16px">
+          <div class="tabs" style="margin-bottom:12px">
+            <button class="tab active" style="font-size:12px">한눈 요약</button>
+            <button class="tab" style="font-size:12px">인사이트·엑기스</button>
+            <button class="tab" style="font-size:12px">섹션·자막</button>
+          </div>
+          <div class="headline" style="font-size:14px">💡 에이전트의 핵심은 피드백 루프 설계다</div>
+          <div class="insight">기존 3줄 요약이 이 탭으로 흡수됨 ① … ② … ③ …</div>
+        </div>
+      </div>
+      <p class="note">통합하면 탭 구조로 기존 요약을 첫 탭에 배치하는 형태가 됨</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.tab[data-p]').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.tab[data-p]').forEach(function (x) { x.classList.remove('active'); });
+      document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('active'); });
+      t.classList.add('active');
+      document.getElementById(t.dataset.p).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
