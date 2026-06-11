@@ -25,7 +25,7 @@ export default function WelcomeBanner() {
       <button
         type="button"
         onClick={handleDismiss}
-        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full text-(--notion-fg)/40 hover:bg-(--notion-hover) hover:text-(--notion-fg)"
+        className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-(--notion-fg)/40 touch-manipulation hover:bg-(--notion-hover) hover:text-(--notion-fg) sm:right-2 sm:top-2 sm:h-8 sm:w-8"
         aria-label="배너 닫기"
       >
         <X size={16} />

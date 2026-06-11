@@ -9,10 +9,25 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node scripts/smoke-test.mjs",
+    "test:run": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "verify:supabase": "node scripts/verify-supabase-schema.mjs"
+    "test:e2e": "node scripts/run-e2e.mjs",
+    "test:e2e:install": "playwright install chromium",
+    "verify:supabase": "node scripts/verify-supabase-schema.mjs",
+    "vhk": "node scripts/vhk-guard.mjs run",
+    "vhk:incident": "node scripts/vhk-guard.mjs record",
+    "vhk:triage": "node scripts/vhk-guard.mjs triage",
+    "vhk:draft": "node scripts/vhk-guard.mjs draft",
+    "vhk:report": "node scripts/vhk-guard.mjs report",
+    "vhk:link": "node scripts/vhk-guard.mjs link",
+    "vhk:incidents": "node scripts/vhk-guard.mjs list",
+    "vhk:policy": "node scripts/vhk-guard.mjs check",
+    "security:secrets": "node scripts/scan-secrets.mjs",
+    "security:history": "node scripts/scan-secrets.mjs --history",
+    "vhk:evidence": "npm run vhk -- verify",
+    "verify:focus-feed": "node scripts/verify-focus-feed.mjs",
+    "verify:release": "node scripts/verify-focus-feed.mjs --release"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.9.0",
@@ -28,9 +43,11 @@
     "react-dom": "19.2.3",
     "rss-parser": "^3.13.0",
     "stripe": "^20.4.1",
-    "youtube-transcript": "^1.2.1"
+    "youtube-transcript": "^1.2.1",
+    "youtubei.js": "^17.0.1"
   },
   "devDependencies": {
+    "@byh3071/vhk": "2.5.1",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

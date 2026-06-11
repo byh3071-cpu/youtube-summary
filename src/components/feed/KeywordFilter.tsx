@@ -107,20 +107,20 @@ export default function KeywordFilter({
             "mb-0 rounded-b-none rounded-t-none border border-t-0 border-(--notion-border) bg-(--notion-bg) px-5 pt-0 pb-1 sm:px-7 mt-0"
       }
     >
-      <div className={compact ? "mb-0 flex items-center justify-between gap-3" : "mb-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"}>
+      <div className={compact ? "mb-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-1" : "mb-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"}>
         {compact ? (
           <>
-            <div className="flex items-center gap-3">
-              <h2 className="mb-0 text-sm font-semibold">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <h2 className="mb-0 shrink-0 text-sm font-semibold">
                 필터
               </h2>
-              {headerRight ? <div className="shrink-0">{headerRight}</div> : null}
+              {headerRight ? <div className="min-w-0 flex-1">{headerRight}</div> : null}
             </div>
             <button
               type="button"
               onClick={() => setCollapsed(prev => !prev)}
               aria-label={collapsed ? "필터 패널 열기" : "필터 패널 접기"}
-              className="flex items-center gap-1 rounded-full border border-(--notion-border) px-2.5 py-1 text-xs font-semibold text-(--notion-fg)/70 transition-colors hover:bg-(--notion-hover)"
+              className="flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-(--notion-border) px-2.5 py-1 text-xs font-semibold text-(--notion-fg)/70 transition-colors touch-manipulation hover:bg-(--notion-hover) sm:min-h-0"
             >
               {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
               {collapsed ? "열기" : "접기"}
@@ -139,7 +139,7 @@ export default function KeywordFilter({
                   onClick={() => setCollapsed(prev => !prev)}
                   aria-label={collapsed ? "필터 패널 열기" : "필터 패널 접기"}
                   title={collapsed ? "필터 패널 열기" : "필터 패널 접기"}
-                  className="flex items-center gap-1 rounded-full border border-(--notion-border) px-2.5 py-1 font-semibold text-(--notion-fg)/70 transition-colors hover:bg-(--notion-hover)"
+                  className="flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-full border border-(--notion-border) px-2.5 py-1 font-semibold text-(--notion-fg)/70 transition-colors touch-manipulation hover:bg-(--notion-hover) sm:min-h-0"
                 >
                   {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                   <span>{collapsed ? "열기" : "접기"}</span>

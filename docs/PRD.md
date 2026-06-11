@@ -40,11 +40,11 @@ tags: [focus-feed, prd, product]
 4. **키워드 필터**: 브라우저 `localStorage`만 사용(`src/lib/storage.ts`). URL 쿼리·서버 동기화는 **현재 제품 범위에 포함하지 않음**(개인 기기 단위).
 5. **라디오**: 큐, 하단 플로팅 플레이어, 이전/다음, 재생목록·미니영상·전체화면 등(모바일 터치·safe-area 고려).
 6. **AI**: Gemini — 3줄 요약, 인사이트, 팀 브리핑, **피드 Q&A**(병합 피드 상위 항목 컨텍스트) 등(서버 액션·사용량·플랜 검사).
-7. **북마크·플레이리스트**: 로그인 연동 페이지·API 존재.
+7. **북마크·플레이리스트**: 로그인 연동 페이지·API 존재. **플레이리스트 서버 저장은 로그인 사용자 전용** — 비로그인 큐는 브라우저 메모리에서만 사용(저장 API 401, 목록은 본인 `user_id`만 조회, `docs/DATA_PROTECTION.md` §2).
 8. **팀**: 팀 생성·초대·조인·팀별 북마크/브리핑 등 라우트 (`/teams`, `/teams/join`, …).
 9. **결제**: `/pricing`, Stripe 환경 변수(`.env.example` 참고).
 10. **인증**: Supabase Google OAuth, `NEXT_PUBLIC_SITE_URL` 배포 시 필수.
-11. **PWA**: `public/app.webmanifest`, 서비스 워커·`PwaInstaller` (아이콘·캐시 정책은 코드·manifest 기준).
+11. **PWA**: `public/app.webmanifest`(단일 manifest, 정사각 아이콘 192/512), 서비스 워커 `public/sw.js`·`PwaInstaller`. 캐시 정책: navigation은 network 우선·**HTML 미캐시**(stale chunk 방지), `/_next/static/` cache-first, 이미지 stale-while-revalidate, **API·RSC·인증 미캐시**, 오프라인은 정적 `/offline.html`.
 12. **테마**: 기본 라이트, 시스템 전환 가능(`ThemeProvider`).
 
 ## 4.1 피드 Q&A (M5)
@@ -130,3 +130,4 @@ tags: [focus-feed, prd, product]
 | 2026-05-18 | `FeedHeader`·`KeywordFilter` 레이아웃: 음수 마진·`translateY`·픽셀 마진 props 제거, `flex`/간격으로 정리 |
 | 2026-05-18 | 피드 Q&A(M5)·`usage_daily.feed_qa_count` 마이그레이션·UsageBadge·CI 워크플로 |
 | 2026-05-18 | `/trends` 대시보드·피드 Q&A 멀티턴·Playwright·모바일 QA 문서·피드 `content-visibility` |
+| 2026-06-11 | QA 후속(M7): 플레이리스트 로그인 전용 서버 저장, PWA 캐시 정책·manifest 단일화, 모바일 모달 잠금·44px·테마 토글, YouTube/Gemini 설정 오류 분류, RSS 엔티티 디코딩 |

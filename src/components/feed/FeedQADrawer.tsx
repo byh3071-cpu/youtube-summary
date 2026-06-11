@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { MessageCircle, X, Loader2, Trash2, Copy, ListTodo } from "lucide-react";
 import { feedQAAction } from "@/app/actions/feed-qa";
 import type { FeedQAHistoryTurn } from "@/app/actions/feed-qa";
+import { useBodyScrollLock } from "@/lib/body-scroll-lock";
 
 type Props = {
   selectedSourceId?: string;
@@ -37,6 +38,17 @@ export default function FeedQADrawer({ selectedSourceId }: Props) {
   const [pending, startTransition] = useTransition();
 
   const key = useMemo(() => storageKey(selectedSourceId), [selectedSourceId]);
+
+  useBodyScrollLock(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -125,14 +137,16 @@ export default function FeedQADrawer({ selectedSourceId }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-(--notion-border) bg-(--notion-bg) text-(--notion-fg) shadow-lg transition hover:bg-(--notion-hover) sm:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))]"
+        // 데스크톱에서도 하단 라디오 푸터/안내(z-50, 높이 ~5rem)에 가리지 않도록 5.5rem 위에 띄운다.
+        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-(--notion-border) bg-(--notion-bg) text-(--notion-fg) shadow-lg transition hover:bg-(--notion-hover)"
         aria-label="피드 Q&A 열기"
       >
         <MessageCircle size={22} strokeWidth={2} />
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-start sm:justify-end sm:p-4 sm:pt-24">
+        // 라디오 푸터(z-50)·재생목록 서랍(z-55/56)보다 위에 떠야 입력·전송 버튼이 가리지 않는다.
+        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-start sm:justify-end sm:p-4 sm:pt-24">
           <button
             type="button"
             className="absolute inset-0 bg-black/45"
@@ -143,7 +157,7 @@ export default function FeedQADrawer({ selectedSourceId }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="feed-qa-title"
-            className="relative flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-2xl border border-(--notion-border) bg-(--notion-bg) shadow-2xl sm:max-h-[min(36rem,calc(100vh-6rem))] sm:rounded-2xl"
+            className="relative flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-2xl border border-(--notion-border) bg-(--notion-bg) pb-[env(safe-area-inset-bottom,0px)] shadow-2xl sm:max-h-[min(36rem,calc(100vh-6rem))] sm:rounded-2xl sm:pb-0"
           >
             <div className="flex items-center justify-between border-b border-(--notion-border) px-4 py-3">
               <h2 id="feed-qa-title" className="text-sm font-semibold text-(--notion-fg)">

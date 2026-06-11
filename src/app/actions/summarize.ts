@@ -5,7 +5,7 @@ import { getVideoContext } from "@/lib/video-context";
 import { getSupabaseForSummaries, type Database } from "@/lib/supabase-server";
 import { getMergedFeed } from "@/lib/feed";
 import { getSessionMergedSources } from "@/lib/merged-session-sources";
-import { generateGeminiText } from "@/lib/gemini";
+import { generateGeminiText, generateGeminiTextResult, geminiFailureMessage, type GeminiTextResult } from "@/lib/gemini";
 import { extractJsonObject } from "@/lib/llm-json";
 import type { FeedItem } from "@/types/feed";
 import {
@@ -27,8 +27,8 @@ const QUALITY_THRESHOLD = 78;
 /** 미달 시 재생성 최대 횟수 (1회 생성 + 최대 2회 재생성 = 총 3회 시도) */
 const MAX_REGENERATION_ATTEMPTS = 3;
 
-function summarizeWithGemini(prompt: string): Promise<string | null> {
-  return generateGeminiText(prompt, "Summarize");
+function summarizeWithGemini(prompt: string): Promise<GeminiTextResult> {
+  return generateGeminiTextResult(prompt, "Summarize");
 }
 
 type QualityEvalResult = { score: number; passed: boolean; reason?: string };
@@ -75,7 +75,7 @@ type RankingResult = {
 
 export async function summarizeVideoAction(videoId: string) {
   if (!process.env.GEMINI_API_KEY) {
-    return { error: ".env.local 파일에 GEMINI_API_KEY 설정이 필요합니다." };
+    return { error: geminiFailureMessage("missing_key") };
   }
 
   const burst = await guardGeminiActionRateLimit("summary");
@@ -125,14 +125,14 @@ export async function summarizeVideoAction(videoId: string) {
       const prompt = retryReason
         ? basePrompt + SUMMARY_RETRY_HINT(retryReason)
         : basePrompt;
-      const summary = await summarizeWithGemini(prompt);
-      if (!summary) {
+      const summaryRes = await summarizeWithGemini(prompt);
+      if (!summaryRes.ok) {
         if (lastSummary) break;
-        return { error: "요약 생성에 실패했습니다. 잠시 후 다시 시도해 주세요." };
+        return { error: geminiFailureMessage(summaryRes.kind) };
       }
-      lastSummary = summary;
+      lastSummary = summaryRes.text;
 
-      const evalResult = await evaluateSummaryQuality(contextSnippet, summary);
+      const evalResult = await evaluateSummaryQuality(contextSnippet, summaryRes.text);
       if (!evalResult) {
         break;
       }
@@ -165,7 +165,7 @@ export async function summarizeVideoAction(videoId: string) {
 
 export async function summarizeInsightAction(videoId: string) {
   if (!process.env.GEMINI_API_KEY) {
-    return { error: ".env.local 파일에 GEMINI_API_KEY 설정이 필요합니다." };
+    return { error: geminiFailureMessage("missing_key") };
   }
 
   const burst = await guardGeminiActionRateLimit("insight");
@@ -198,12 +198,12 @@ export async function summarizeInsightAction(videoId: string) {
       const prompt = retryReason
         ? basePrompt + INSIGHT_RETRY_HINT(retryReason)
         : basePrompt;
-      const insight = await summarizeWithGemini(prompt);
-      if (!insight) {
+      const insightRes = await summarizeWithGemini(prompt);
+      if (!insightRes.ok) {
         if (lastInsight) break;
-        return { error: "인사이트 정리에 실패했습니다. 잠시 후 다시 시도해 주세요." };
+        return { error: geminiFailureMessage(insightRes.kind) };
       }
-      lastInsight = insight.trim();
+      lastInsight = insightRes.text.trim();
 
       const evalResult = await evaluateInsightQuality(contextSnippet, lastInsight);
       if (!evalResult) break;
@@ -262,7 +262,7 @@ const BRIEFING_CANDIDATES_CAP = 50;
 
 export async function rankFeedByGoalsAction(goals: string, limit?: number) {
   if (!process.env.GEMINI_API_KEY) {
-    return { error: ".env.local 파일에 GEMINI_API_KEY 설정이 필요합니다." };
+    return { error: geminiFailureMessage("missing_key") };
   }
 
   const goalText = goals.trim();
@@ -321,11 +321,11 @@ export async function rankFeedByGoalsAction(goals: string, limit?: number) {
   const prompt = getRankingPrompt(systemGoal, itemsPayload, candidateCount);
 
   try {
-    const raw = await summarizeWithGemini(prompt);
-    if (!raw) {
-      return { error: "우선순위 랭킹 생성에 실패했습니다. 잠시 후 다시 시도해 주세요." };
+    const rawRes = await summarizeWithGemini(prompt);
+    if (!rawRes.ok) {
+      return { error: geminiFailureMessage(rawRes.kind) };
     }
-    const parsed = safeParseRanking(raw);
+    const parsed = safeParseRanking(rawRes.text);
     if (!parsed) {
       return { error: "AI 응답을 해석하는 데 실패했습니다. 잠시 후 다시 시도해 주세요." };
     }

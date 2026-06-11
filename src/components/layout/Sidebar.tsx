@@ -6,6 +6,7 @@ import { useSearchParams, usePathname } from "next/navigation";
 import { Rss, Youtube, Tag, Bookmark, ListMusic, Film, Clapperboard, Radio, Users, TrendingUp } from "lucide-react";
 import { defaultSources, FEED_CATEGORIES } from "@/lib/sources";
 import { LoginButton } from "@/components/auth/LoginButton";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import AddChannelButton from "@/components/feed/AddChannelButton";
 import SourceExportImport from "@/components/feed/SourceExportImport";
 import YouTubeSourceList from "@/components/layout/YouTubeSourceList";
@@ -186,6 +187,7 @@ export default function Sidebar({
             </nav>
 
             <div className="flex flex-col gap-2 border-t border-(--notion-border) bg-white dark:bg-transparent p-4 pb-28 md:pb-24">
+                <ThemeToggle />
                 <div className="text-xs leading-relaxed text-(--notion-fg)/55">
                     새 기능은 검증이 끝난 뒤 순차적으로 추가합니다. 현재는 읽기와 필터링 경험에 집중합니다.
                 </div>

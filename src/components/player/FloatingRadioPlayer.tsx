@@ -46,6 +46,7 @@ declare namespace YT {
 
 const PLAYER_DIV_ID = "yt-radio-player-host";
 const PLAYER_WRAPPER_ID = "yt-radio-player-wrapper";
+const EMPTY_HINT_DISMISSED_KEY = "focus-feed:radio-empty-hint-dismissed";
 
 type RadioOptional = ReturnType<typeof useRadioQueueOptional>;
 type RadioRefValue = NonNullable<RadioOptional>;
@@ -64,6 +65,27 @@ export default function FloatingRadioPlayer() {
   const [fullPlayerOpen, setFullPlayerOpen] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resumeSeconds, setResumeSeconds] = useState<number | null>(null);
+  // 빈 큐 안내: 모바일에서는 닫을 수 있게 해 피드/Q&A 공간을 계속 차지하지 않도록 한다(세션 단위 기억).
+  const [emptyHintDismissed, setEmptyHintDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(EMPTY_HINT_DISMISSED_KEY) === "1") {
+        setEmptyHintDismissed(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const dismissEmptyHint = useCallback(() => {
+    setEmptyHintDismissed(true);
+    try {
+      sessionStorage.setItem(EMPTY_HINT_DISMISSED_KEY, "1");
+    } catch {
+      // ignore
+    }
+  }, []);
   /** 시크 직후 rAF가 이전 재생 위치로 덮어쓰지 않도록 목표 % 유지 */
   const seekTargetRef = useRef<number | null>(null);
   const seekTargetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -323,6 +345,56 @@ export default function FloatingRadioPlayer() {
     radioRef.current?.togglePlay();
   }, []);
 
+  /** 초 단위 직접 시킹 (딥다이브 드로어 등 외부 타임스탬프 클릭용) */
+  const seekToSeconds = useCallback((seconds: number) => {
+    const p = playerRef.current as { getDuration?: () => number; seekTo?: (sec: number, allow: boolean) => void } | null;
+    if (!p || typeof p.seekTo !== "function") return;
+    try {
+      p.seekTo(Math.max(0, seconds), true);
+      const duration = typeof p.getDuration === "function" ? p.getDuration() : 0;
+      if (duration > 0) {
+        const percent = Math.max(0, Math.min(100, (seconds / duration) * 100));
+        seekTargetRef.current = percent;
+        setProgress(percent);
+        if (seekTargetTimeoutRef.current) clearTimeout(seekTargetTimeoutRef.current);
+        seekTargetTimeoutRef.current = setTimeout(() => {
+          seekTargetRef.current = null;
+          seekTargetTimeoutRef.current = null;
+        }, 1500);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  /** 외부 시킹 요청 수신: 해당 영상이 아직 로드 전이면 보류했다가 준비되면 적용 */
+  const pendingSeekRef = useRef<{ videoId: string; seconds: number } | null>(null);
+  useEffect(() => {
+    const onSeekRequest = (e: Event) => {
+      const detail = (e as CustomEvent<{ videoId?: string; seconds?: number }>).detail;
+      if (!detail?.videoId || typeof detail.seconds !== "number") return;
+      if (radioRef.current?.currentItem?.videoId === detail.videoId && playerReady) {
+        seekToSeconds(detail.seconds);
+      } else {
+        pendingSeekRef.current = { videoId: detail.videoId, seconds: detail.seconds };
+      }
+    };
+    window.addEventListener("focus-feed:radio-seek", onSeekRequest);
+    return () => window.removeEventListener("focus-feed:radio-seek", onSeekRequest);
+  }, [playerReady, seekToSeconds]);
+
+  useEffect(() => {
+    const pending = pendingSeekRef.current;
+    if (!pending || !playerReady) return;
+    if (radio?.currentItem?.videoId !== pending.videoId) return;
+    // loadVideoById 직후에는 시킹이 무시될 수 있어 짧게 지연
+    const t = setTimeout(() => {
+      seekToSeconds(pending.seconds);
+      pendingSeekRef.current = null;
+    }, 600);
+    return () => clearTimeout(t);
+  }, [playerReady, radio?.currentItem?.videoId, seekToSeconds]);
+
   const handleSeek = useCallback((percent: number) => {
     const p = playerRef.current as { getDuration?: () => number; seekTo?: (sec: number, allow: boolean) => void } | null;
     if (!p || typeof p.getDuration !== "function" || typeof p.seekTo !== "function") return;
@@ -346,29 +418,54 @@ export default function FloatingRadioPlayer() {
 
   if (radio.queue.length === 0) {
     return (
-      <footer
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-(--notion-border) bg-(--notion-bg)/95 py-2 backdrop-blur supports-backdrop-filter:bg-(--notion-bg)/80"
-        role="region"
-        aria-label="라디오 안내"
-      >
-        <div className="mx-auto flex max-w-5xl items-center justify-center gap-2.5 px-4 md:px-6">
-          <div className="relative h-14 w-14 shrink-0 md:h-16 md:w-16">
-            <Image
-              src="/focus-feed-logo-v2.png"
-              alt="Focus Feed 로고"
-              fill
-              sizes="(max-width: 768px) 56px, 64px"
-              className="object-contain object-center"
-            />
+      <>
+        {/* 데스크톱: 기존 고정 안내 유지 */}
+        <footer
+          className="fixed bottom-0 left-0 right-0 z-50 hidden border-t border-(--notion-border) bg-(--notion-bg)/95 py-2 backdrop-blur supports-backdrop-filter:bg-(--notion-bg)/80 md:block"
+          role="region"
+          aria-label="라디오 안내"
+        >
+          <div className="mx-auto flex max-w-5xl items-center justify-center gap-2.5 px-4 md:px-6">
+            <div className="relative h-14 w-14 shrink-0 md:h-16 md:w-16">
+              <Image
+                src="/focus-feed-logo-v2.png"
+                alt="Focus Feed 로고"
+                fill
+                sizes="(max-width: 768px) 56px, 64px"
+                className="object-contain object-center"
+              />
+            </div>
+            <div className="text-sm">
+              <p className="font-medium text-(--notion-fg)">아직 라디오에 담긴 영상이 없어요.</p>
+              <p className="text-(--notion-fg)/65">
+                피드에서 <span className="font-semibold text-(--focus-accent)">라디오에 추가</span>를 눌러 플레이리스트를 채워보세요.
+              </p>
+            </div>
           </div>
-          <div className="text-sm">
-            <p className="font-medium text-(--notion-fg)">아직 라디오에 담긴 영상이 없어요.</p>
-                <p className="text-(--notion-fg)/65">
-              피드에서 <span className="font-semibold text-(--focus-accent)">라디오에 추가</span>를 눌러 플레이리스트를 채워보세요.
-            </p>
+        </footer>
+        {/* 모바일: 닫을 수 있는 컴팩트 안내 — 닫으면 피드/Q&A 공간을 차지하지 않음 */}
+        {!emptyHintDismissed && (
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 border-t border-(--notion-border) bg-(--notion-bg)/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur supports-backdrop-filter:bg-(--notion-bg)/80 md:hidden"
+            role="region"
+            aria-label="라디오 안내"
+          >
+            <div className="flex items-center gap-2 px-3 py-1.5">
+              <p className="min-w-0 flex-1 text-xs leading-snug text-(--notion-fg)/75">
+                피드에서 <span className="font-semibold text-(--focus-accent)">라디오에 추가</span>를 누르면 여기서 이어 들을 수 있어요.
+              </p>
+              <button
+                type="button"
+                onClick={dismissEmptyHint}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-(--notion-fg)/55 touch-manipulation hover:bg-(--notion-hover) hover:text-(--notion-fg)"
+                aria-label="라디오 안내 닫기"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
-        </div>
-      </footer>
+        )}
+      </>
     );
   }
 

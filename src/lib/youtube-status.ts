@@ -4,7 +4,7 @@ import type { YouTubeFetchStatus } from "./youtube";
 export const YOUTUBE_STATUS_LABEL: Record<YouTubeFetchStatus, string> = {
   ready: "정상 연결",
   missing_api_key: "키 필요",
-  invalid_api_key: "키 오류",
+  invalid_api_key: "연동 설정 오류",
   request_failed: "일시 장애",
 } as const;
 

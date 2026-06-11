@@ -1,5 +1,6 @@
 import Parser from 'rss-parser';
 import { FeedItem } from '../types/feed';
+import { htmlToPlainText } from './html-entities';
 
 type CustomFeed = { title: string };
 type CustomItem = {
@@ -51,13 +52,14 @@ export async function fetchRssFeed(url: string, sourceName: string): Promise<Fee
         return items.map((item) => {
             return {
                 id: getStableRssId(item, sourceName),
-                title: item.title || "No title",
+                // RSS 원문의 `&quot;` `&#039;` `&amp;` 같은 엔티티가 화면에 그대로 노출되지 않도록 디코딩
+                title: htmlToPlainText(item.title || "") || "No title",
                 link: item.link || url,
                 pubDate: toIsoDate(item.pubDate),
                 source: "RSS",
                 sourceId: url,
                 sourceName: sourceName,
-                summary: item.contentSnippet || item.content || "",
+                summary: htmlToPlainText(item.contentSnippet || item.content || ""),
             } as FeedItem;
         });
     } catch (error) {

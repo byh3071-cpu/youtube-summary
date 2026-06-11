@@ -92,6 +92,20 @@ function logGenericYouTubeWarning(channelName: string, status: number) {
   warnOnce(`request_failed:${channelName}`, `YouTube feed request failed for ${channelName} with status ${status}.`);
 }
 
+/**
+ * Google 오류 body가 키 만료·무효·API 미활성 같은 운영 설정 오류인지 판별.
+ * 키 만료는 HTTP 400 `API key expired`로 내려오므로 상태 코드만으로 구분하면 안 된다.
+ */
+function isYouTubeConfigErrorBody(errorText: string): boolean {
+  return (
+    errorText.includes("API key expired") ||
+    errorText.includes("API_KEY_INVALID") ||
+    errorText.includes("API key not valid") ||
+    errorText.includes("keyInvalid") ||
+    errorText.includes("accessNotConfigured")
+  );
+}
+
 // 주어진 Channel ID (UC...)를 Uploads Playlist ID (UU...)로 변환
 export function getUploadsPlaylistId(channelId: string): string {
   if (channelId.startsWith("UC")) {
@@ -204,18 +218,18 @@ export async function fetchYouTubeFeed(channelId: string, channelName: string): 
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[YouTube] ${channelName} HTTP ${response.status}: ${errorText.slice(0, 400)}`);
+      // 채널마다 동일 오류가 반복 출력되지 않도록 warnOnce 사용
+      warnOnce(
+        `http_error:${channelName}:${response.status}`,
+        `[YouTube] ${channelName} HTTP ${response.status}: ${errorText.slice(0, 400)}`,
+      );
 
-      if (
-        (response.status === 400 || response.status === 403) &&
-        (errorText.includes("API key not valid") || errorText.includes("keyInvalid"))
-      ) {
-        logInvalidApiKeyWarning();
-        return { items: [], status: "invalid_api_key" };
-      }
-
-      if (response.status === 403 && errorText.includes("accessNotConfigured")) {
-        warnOnce("api_not_enabled", "[YouTube] YouTube Data API v3가 활성화되지 않았습니다. console.cloud.google.com에서 활성화해 주세요.");
+      if ((response.status === 400 || response.status === 403) && isYouTubeConfigErrorBody(errorText)) {
+        if (errorText.includes("accessNotConfigured")) {
+          warnOnce("api_not_enabled", "[YouTube] YouTube Data API v3가 활성화되지 않았습니다. console.cloud.google.com에서 활성화해 주세요.");
+        } else {
+          logInvalidApiKeyWarning();
+        }
         return { items: [], status: "invalid_api_key" };
       }
 
@@ -297,7 +311,8 @@ export async function resolveYouTubeChannel(parsed: { type: "channelId"; channel
   }
   try {
     const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?${params.toString()}`, {
-      next: { revalidate: 3600 },
+      // 채널명·아바타는 거의 안 바뀌므로 24시간 캐시 — 페이지 SSR 시 아바타 해석 비용 절감
+      next: { revalidate: 86400 },
     });
     if (!res.ok) return null;
     const data = (await res.json()) as {

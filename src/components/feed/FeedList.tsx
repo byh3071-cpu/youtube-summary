@@ -57,7 +57,7 @@ function FeedListFlat({ items }: { items: FeedItemType[] }) {
                     <button
                         type="button"
                         onClick={() => setFlatLimit((p) => p + FLAT_LIST_PAGE_SIZE)}
-                        className="rounded-full border border-(--notion-border) px-4 py-2 text-xs font-semibold text-(--notion-fg)/60 hover:bg-(--notion-hover)"
+                        className="min-h-[44px] rounded-full border border-(--notion-border) px-4 py-2 text-xs font-semibold text-(--notion-fg)/60 touch-manipulation hover:bg-(--notion-hover) sm:min-h-0"
                     >
                         더 보기 ({flatRemaining}개 남음)
                     </button>
@@ -160,7 +160,7 @@ export default function FeedList({ items, hasActiveFilters = false, selectedSour
                                         <button
                                             type="button"
                                             onClick={() => setYtLimit(prev => prev + YOUTUBE_PAGE_SIZE)}
-                                            className="rounded-full border border-(--notion-border) px-4 py-2 text-xs font-semibold text-(--notion-fg)/60 hover:bg-(--notion-hover)"
+                                            className="min-h-[44px] rounded-full border border-(--notion-border) px-4 py-2 text-xs font-semibold text-(--notion-fg)/60 touch-manipulation hover:bg-(--notion-hover) sm:min-h-0"
                                         >
                                             더 보기 ({youtubeItems.length - ytLimit}개 남음)
                                         </button>
@@ -206,7 +206,7 @@ export default function FeedList({ items, hasActiveFilters = false, selectedSour
                                         <button
                                             type="button"
                                             onClick={() => setRssLimit(prev => prev + RSS_PAGE_SIZE)}
-                                            className="rounded-full border border-(--notion-border) px-4 py-2 text-xs font-semibold text-(--notion-fg)/60 hover:bg-(--notion-hover)"
+                                            className="min-h-[44px] rounded-full border border-(--notion-border) px-4 py-2 text-xs font-semibold text-(--notion-fg)/60 touch-manipulation hover:bg-(--notion-hover) sm:min-h-0"
                                         >
                                             더 보기 ({rssItems.length - rssLimit}개 남음)
                                         </button>

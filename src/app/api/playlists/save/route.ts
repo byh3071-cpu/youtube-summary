@@ -6,6 +6,15 @@ import type { RadioQueueItem } from "@/contexts/RadioQueueContext";
 
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const user = await getCurrentUserFromCookies(cookieStore);
+    if (!user) {
+      return NextResponse.json(
+        { error: "로그인이 필요합니다. 플레이리스트는 로그인한 계정에만 저장됩니다." },
+        { status: 401 },
+      );
+    }
+
     const { items, title } = (await req.json()) as {
       items?: RadioQueueItem[];
       title?: string;
@@ -18,9 +27,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cookieStore = await cookies();
-    const user = await getCurrentUserFromCookies(cookieStore);
-    const result = await savePlaylistAction(items, title, user?.id ?? null);
+    // savePlaylistAction은 쿠키 세션에서 사용자를 직접 확인한다(클라이언트 userId 불신뢰).
+    const result = await savePlaylistAction(items, title);
 
     if ("error" in result && result.error) {
       return NextResponse.json(
@@ -38,4 +46,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

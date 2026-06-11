@@ -9,6 +9,7 @@ import {
   compactCustomSources,
   syncCustomSourcesWithDb,
 } from "@/lib/custom-sources-cookie";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 const SYNCED_FLAG_KEY = "focus_feed_sources_synced_v1";
 const BACKUP_KEY = "focus_feed_sources_backup_v1";
@@ -57,7 +58,26 @@ export default function CustomSourcesSync() {
       }
     }
 
-    void syncCustomSourcesWithDb(baseSources).then(async ({ merged, changed }) => {
+    void (async () => {
+      // 비로그인은 GET /api/custom-sources가 예상된 401을 내며 브라우저 콘솔에
+      // 리소스 오류를 남기므로, 로컬 세션을 먼저 확인하고 로그인 시에만 DB 동기화한다.
+      let isLoggedIn = false;
+      const supabase = getSupabaseBrowserClient();
+      if (supabase) {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          isLoggedIn = !!session;
+        } catch {
+          // 세션 확인 실패 시 비로그인으로 간주
+        }
+      }
+
+      const { merged, changed } = isLoggedIn
+        ? await syncCustomSourcesWithDb(baseSources)
+        : { merged: baseSources, changed: false };
+
       try {
         sessionStorage.setItem(SYNCED_FLAG_KEY, "1");
       } catch {
@@ -83,7 +103,7 @@ export default function CustomSourcesSync() {
         }
         router.refresh();
       }
-    });
+    })();
   }, [router]);
 
   return null;

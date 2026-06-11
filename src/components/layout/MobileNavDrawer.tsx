@@ -7,6 +7,7 @@ import { useSearchParams, usePathname } from "next/navigation";
 import { X, Bookmark, ListMusic, Film, Clapperboard, Radio, TrendingUp } from "lucide-react";
 import { ModalTransition } from "@/components/ui/ModalTransition";
 import { LoginButton } from "@/components/auth/LoginButton";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { defaultSources, FEED_CATEGORIES } from "@/lib/sources";
 import AddChannelButton from "@/components/feed/AddChannelButton";
 import type { MergedFeedResult } from "@/lib/feed";
@@ -16,7 +17,7 @@ const rssSources = defaultSources.filter((s) => s.type === "RSS");
 const youtubeStatusLabel = {
   ready: "정상 연결",
   missing_api_key: "키 필요",
-  invalid_api_key: "키 오류",
+  invalid_api_key: "연동 설정 오류",
   request_failed: "일시 장애",
 } as const;
 const youtubeStatusTone = {
@@ -110,6 +111,9 @@ export default function MobileNavDrawer({
               </Link>
               <div className="flex items-center justify-center gap-2 pt-1 w-full">
                 <LoginButton />
+              </div>
+              <div className="w-full rounded-lg border border-(--notion-border)/60">
+                <ThemeToggle />
               </div>
             </div>
           </div>

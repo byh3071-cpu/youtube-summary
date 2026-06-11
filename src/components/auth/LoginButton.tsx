@@ -114,7 +114,7 @@ export function LoginButton() {
       <button
         type="button"
         onClick={handleLogin}
-        className="rounded-full bg-(--notion-gray)/30 px-3 py-2 text-[11px] font-medium text-(--notion-fg)/85 transition-colors hover:bg-(--notion-hover) min-h-[32px] touch-manipulation whitespace-nowrap"
+        className="rounded-full bg-(--notion-gray)/30 px-4 py-2 text-[11px] font-medium text-(--notion-fg)/85 transition-colors hover:bg-(--notion-hover) min-h-[44px] sm:min-h-[32px] touch-manipulation whitespace-nowrap"
       >
         Google로 로그인
       </button>

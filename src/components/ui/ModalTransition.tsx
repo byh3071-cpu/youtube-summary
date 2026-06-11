@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useBodyScrollLock } from "@/lib/body-scroll-lock";
 
 const overlayTransition = { duration: 0.2 };
 const panelTransition = {
@@ -43,6 +44,8 @@ export function ModalTransition({
 }: ModalTransitionProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousActiveRef = useRef<HTMLElement | null>(null);
+
+  useBodyScrollLock(open);
 
   useEffect(() => {
     if (!open) return;

@@ -71,7 +71,7 @@ export default function RefreshButton() {
         onClick={handleRefresh}
         disabled={isRefreshing}
         title={shortHint || tooltipText}
-        className="flex items-center gap-2 rounded-full border border-(--notion-border) bg-(--notion-bg)/75 px-3 py-2 text-sm text-(--notion-fg)/70 shadow-sm transition-colors hover:bg-(--notion-hover) hover:text-(--notion-fg) disabled:opacity-50"
+        className="flex min-h-[44px] items-center gap-2 rounded-full border border-(--notion-border) bg-(--notion-bg)/75 px-3 py-2 text-sm text-(--notion-fg)/70 shadow-sm transition-colors touch-manipulation hover:bg-(--notion-hover) hover:text-(--notion-fg) disabled:opacity-50 sm:min-h-0"
       >
         <RefreshCcw size={14} className={isRefreshing ? "animate-spin" : ""} />
         <span>{isRefreshing ? "새로고침 중…" : "새로고침"}</span>

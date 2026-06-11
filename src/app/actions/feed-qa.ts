@@ -6,7 +6,7 @@ import { getSessionMergedSources } from "@/lib/merged-session-sources";
 import type { CookieStore } from "@/lib/supabase-server-cookies";
 import { checkUsageLimit, incrementUsage } from "@/lib/plan";
 import { guardGeminiActionRateLimit } from "@/lib/gemini-rate-limit";
-import { generateGeminiText } from "@/lib/gemini";
+import { generateGeminiTextResult, geminiFailureMessage } from "@/lib/gemini";
 import { getFeedQAPrompt } from "@/lib/prompts";
 import type { FeedItem } from "@/types/feed";
 
@@ -34,10 +34,6 @@ function buildContextLines(items: FeedItem[]): string[] {
   });
 }
 
-async function generateAnswer(prompt: string): Promise<string | null> {
-  const raw = await generateGeminiText(prompt, "FeedQA");
-  return raw?.trim() || null;
-}
 
 function formatHistoryForPrompt(history: FeedQAHistoryTurn[] | undefined): string {
   if (!history?.length) return "";
@@ -62,7 +58,7 @@ export async function feedQAAction(
   }
 
   if (!process.env.GEMINI_API_KEY) {
-    return { error: ".env.local 파일에 GEMINI_API_KEY 설정이 필요합니다." };
+    return { error: geminiFailureMessage("missing_key") };
   }
 
   const burst = await guardGeminiActionRateLimit("feed_qa");
@@ -98,9 +94,14 @@ export async function feedQAAction(
 
   const prior = formatHistoryForPrompt(history ?? undefined);
   const prompt = getFeedQAPrompt(lines, q, prior);
-  const answer = await generateAnswer(prompt);
+  // 키 만료 등 운영 설정 오류는 "재시도" 안내 대신 설정 오류로 구분해 표시 (서버 에러 객체는 전달하지 않음)
+  const result = await generateGeminiTextResult(prompt, "FeedQA");
+  if (!result.ok) {
+    return { error: geminiFailureMessage(result.kind) };
+  }
+  const answer = result.text.trim();
   if (!answer) {
-    return { error: "답변을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요." };
+    return { error: geminiFailureMessage("unavailable") };
   }
 
   await incrementUsage(cookieStore as CookieStore, "feed_qa");

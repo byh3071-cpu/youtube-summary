@@ -304,7 +304,7 @@ export default function MyFocusSection() {
             <button
               type="button"
               onClick={() => setGoalsPreviewExpanded((prev) => !prev)}
-              className="mt-0.5 text-[10px] font-semibold text-(--notion-fg)/55 hover:text-(--notion-fg)/80"
+              className="mt-0.5 inline-flex min-h-[44px] items-center text-[10px] font-semibold text-(--notion-fg)/55 touch-manipulation hover:text-(--notion-fg)/80 sm:min-h-0"
             >
               {goalsPreviewExpanded ? "접기" : "더 보기"}
             </button>
@@ -315,7 +315,7 @@ export default function MyFocusSection() {
             <button
               type="button"
               onClick={() => setFocusExpanded((prev) => !prev)}
-              className="rounded-full border border-(--notion-border) px-2.5 py-1 font-semibold hover:bg-(--notion-hover)"
+              className="min-h-[44px] rounded-full border border-(--notion-border) px-2.5 py-1 font-semibold touch-manipulation hover:bg-(--notion-hover) sm:min-h-0"
             >
               {focusExpanded ? (hasGoals ? "접기" : "닫기") : "편집"}
             </button>
@@ -325,7 +325,7 @@ export default function MyFocusSection() {
             onClick={handleRunAiBriefing}
             disabled={!hasGoals || aiLoading}
             aria-busy={aiLoading}
-            className="rounded-full bg-(--notion-fg) px-3 py-1 text-[11px] font-semibold text-(--notion-bg) transition-colors hover:bg-(--notion-fg)/90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-[44px] rounded-full bg-(--notion-fg) px-3 py-1 text-[11px] font-semibold text-(--notion-bg) transition-colors touch-manipulation hover:bg-(--notion-fg)/90 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0"
           >
             {aiLoading ? "브리핑 중..." : "AI 브리핑"}
           </button>

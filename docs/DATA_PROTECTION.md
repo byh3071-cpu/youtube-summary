@@ -32,19 +32,30 @@
 
 - 스키마 (요약)
   - `id`: string (PK)
+  - `user_id`: uuid | null (FK, auth.users.id — `001_plan_usage_playlists.sql`)
   - `title`: string | null
   - `items`: JSON/unknown (라디오 큐 아이템 목록)
   - `created_at`: timestamp
 
-- 사용 방식
-  - `src/app/actions/playlists.ts`의 `savePlaylistAction`에서 **Service Role 키**를 사용해 서버에서 직접 insert
-  - 현재 테이블 타입에는 `user_id`가 정의되어 있지 않아, 플레이리스트가 사용자 단위로 분리되지 않은 구조임
+- 접근 정책 (2026-06-11 QA 후속으로 확정)
+  - 서버 DB 플레이리스트는 **로그인 사용자만** 저장·조회·이름변경·삭제할 수 있다.
+  - 비로그인 큐는 브라우저 메모리에서만 사용하며 **서버 저장은 금지**한다.
+  - `POST /api/playlists/save`: 쿠키 세션 미확인 시 **401**. 클라이언트가 보낸 userId는 신뢰하지 않는다.
+  - `savePlaylistAction` / `renamePlaylistAction` / `deletePlaylistAction`
+    (`src/app/actions/playlists.ts`): 액션 내부에서 쿠키 세션 사용자를 직접 확인하고,
+    모든 update/delete에 `.eq("user_id", user.id)` 조건을 강제한다 (userId 인자를 받지 않음).
+  - `/playlists` 페이지(`src/lib/playlists-server.ts`): 비로그인은 DB를 조회하지 않고 로그인 CTA만 표시.
+    `user_id IS NULL` 조회 경로는 제거됨.
 
-- 무결성·보호 관점 코멘트
-  - 여러 사용자가 함께 사용하는 서비스라면, `playlists`에 `user_id` 컬럼을 추가하고,
-    모든 저장/조회가 **특정 사용자 범위 안에서만** 이뤄지도록 스키마/쿼리를 재설계하는 것을 권장
-  - Service Role 키를 사용하는 만큼, 이 액션은 **반드시 서버에서만 호출**되고,
-    키가 클라이언트 번들로 노출되지 않도록 환경변수 관리에 주의
+- 기존 익명 행(`user_id IS NULL`) 처리
+  - 사용자에게 어떤 화면에서도 노출하지 않는다.
+  - 자동 삭제·특정 사용자 자동 귀속을 하지 않는다. **운영자 수동 검토** 대상.
+  - 검토 SQL: `SELECT id, title, created_at FROM public.playlists WHERE user_id IS NULL;`
+
+- RLS·Service Role
+  - `005_playlists_owner_required.sql`: RLS 활성화 + 본인 소유 SELECT 정책. 쓰기 정책은 없음(서버 전용).
+  - Service Role 키는 RLS를 **우회**하므로, RLS가 있어도 서버 코드의 명시적 `user_id` 조건을 절대 생략하지 않는다.
+  - 이 액션들은 반드시 서버에서만 실행되며, 키가 클라이언트 번들로 노출되지 않도록 환경변수 관리에 주의
 
 ---
 

@@ -27,14 +27,15 @@ export default function ViewSwitcher({ currentView }: { currentView: ViewMode })
   };
 
   return (
-    <div className="flex flex-wrap items-center">
-      <div className="ml-5 flex translate-y-[1.8px] rounded-lg border border-(--notion-border) p-0.5">
+    // 360px 등 좁은 화면에서 글자가 세로로 깨지지 않도록 가로 스크롤 허용
+    <div className="flex min-w-0 items-center overflow-x-auto">
+      <div className="flex shrink-0 rounded-lg border border-(--notion-border) p-0.5">
         {VIEWS.map(({ id, label, icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => setView(id)}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors touch-manipulation sm:min-h-0 ${
               currentView === id
                 ? "bg-(--notion-hover) text-(--notion-fg)"
                 : "text-(--notion-fg)/60 hover:bg-(--notion-hover)/60 hover:text-(--notion-fg)"

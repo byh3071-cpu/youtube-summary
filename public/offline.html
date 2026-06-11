@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>오프라인 — Focus Feed</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f6f5f0;
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+        text-align: center;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      .card { max-width: 360px; }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      p { font-size: 14px; line-height: 1.6; color: rgba(17, 24, 39, 0.65); margin: 0 0 20px; }
+      button {
+        min-height: 44px;
+        padding: 10px 24px;
+        border: none;
+        border-radius: 9999px;
+        background: #111827;
+        color: #f6f5f0;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #191919; color: #e8e6e1; }
+        p { color: rgba(232, 230, 225, 0.65); }
+        button { background: #e8e6e1; color: #191919; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>인터넷에 연결되어 있지 않습니다</h1>
+      <p>Focus Feed는 최신 피드를 보여 주기 위해 네트워크 연결이 필요합니다. 연결을 확인한 뒤 다시 시도해 주세요.</p>
+      <button type="button" onclick="location.reload()">다시 시도</button>
+    </div>
+  </body>
+</html>
