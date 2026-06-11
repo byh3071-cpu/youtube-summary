@@ -1,21 +1,28 @@
+import os
 
 import requests
-import json
+
 
 def list_models():
-    api_key = "AIzaSyAwzBCfDm8xycNgOEJXw8Uq7xRdIlBdMmY"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is required.")
+
+    url = "https://generativelanguage.googleapis.com/v1beta/models"
+
     try:
-        response = requests.get(url)
+        response = requests.get(url, params={"key": api_key}, timeout=30)
+        response.raise_for_status()
         data = response.json()
         if "models" in data:
             for model in data["models"]:
                 print(model["name"])
         else:
             print("No models found in response:", data)
-    except Exception as e:
-        print("Error:", e)
+    except requests.RequestException as error:
+        print("Error:", error)
+        raise
+
 
 if __name__ == "__main__":
     list_models()

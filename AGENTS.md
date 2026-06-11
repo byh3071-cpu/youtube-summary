@@ -13,6 +13,8 @@ tags: [focus-feed, cursor, agents]
 
 ## 단일 소스 우선순위
 
+`RULES.md`는 에이전트 운영·안전·VHK 사용에 대한 헌법이다. 제품 범위와 우선순위는 아래 순서를 따른다.
+
 1. `docs/MILESTONES.md` — 우선순위·완료 체크(M1~M6)
 2. `docs/PRD.md` — 제품 범위·플랜·기능 개요 (기능 변경 시 함께 수정)
 3. `README.md` — 실행 방법·환경 변수 요약·수동 점검 목록
@@ -35,6 +37,17 @@ tags: [focus-feed, cursor, agents]
 - 비밀값·`.env.local` 커밋 금지.
 - 변경 후 `npm run lint` (가능하면 `npm run build`, `npm run test:unit`)로 회귀 확인.
 - 스타일은 같은 파일·디렉터리의 기존 패턴에 맞출 것 (불필요한 대규모 리팩터 지양).
+
+## VHK 필수 규칙
+
+- 먼저 `RULES.md`와 `docs/VHK_ADOPTION.md`를 읽는다.
+- 직접 `vhk`/`vhk.cmd`/`npx vhk`를 실행하지 않고 `npm run vhk -- <command>`를 사용한다.
+- 작업 종료 전 `npm run vhk:policy`를 실행한다.
+- VHK 자체 crash·오탐·미탐·예상 밖 파일 변경을 재현하면 `npm run vhk:incident -- ...`로 기록하고 `npm run vhk:draft -- <id>`로 비밀값 제거 draft를 만든다.
+- 외부 게시 전 사용자에게 draft와 공개 범위를 보여주고 명시적 승인을 받은 뒤 `npm run vhk:report -- <id> --approved`로 VHK GitHub 이슈를 등록한다.
+- 확인된 VHK 결함은 이슈 URL이 incident에 연결되기 전까지 완료로 선언하지 않는다.
+- 앱 코드·테스트·환경 변수·외부 서비스 실패를 VHK 이슈로 등록하지 않는다.
+- `vhk sync`, `save`, `undo`, `deploy`, `publish`, `migrate`, `start`, `init`, `mcp-init`은 사용자 명시 승인 없이 실행하지 않는다.
 
 ## 한국어·문서
 

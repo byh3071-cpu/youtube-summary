@@ -1,0 +1,8 @@
+# VHK local-only state
+memory.json
+refs.json
+HARD_STOP
+cloud.json
+backups/
+reports/
+incidents/

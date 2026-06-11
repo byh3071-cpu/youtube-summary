@@ -16,6 +16,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - run: npm run vhk -- check
+      - run: npm run security:secrets
       - run: npm run lint
       - run: npm run build
       - run: npm run test:unit
@@ -23,3 +25,4 @@ jobs:
       - run: npm run test:e2e
         env:
           CI: true
+      - run: npm run vhk:policy

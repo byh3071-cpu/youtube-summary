@@ -1,0 +1,42 @@
+---
+description: Focus Feed 프로젝트 공통 — 스택, 문서 우선순위, 안전한 변경 습관
+alwaysApply: true
+---
+
+# Focus Feed — 공통 규칙
+
+## 스택
+
+Next.js 16 (App Router), React 19, TypeScript, Tailwind 4, Supabase, Stripe, Gemini, PWA.
+
+## 문서 우선순위
+
+`RULES.md`는 에이전트 운영·안전·VHK 사용 헌법이다.
+
+1. `docs/MILESTONES.md` — 우선순위·완료 체크(M1~M6)
+2. `docs/PRD.md` — 제품·플랜·기능 범위
+3. `README.md` — 실행·환경 변수
+4. `docs/DEPLOYMENT_CHECKLIST.md` — 배포 전 점검
+5. `AGENTS.md` — 에이전트 작업 규칙
+6. `.env.example` — 허용 env 키
+
+`CURSOR_HANDOFF.md`는 과거 핸드오프일 수 있음. 코드·PRD와 충돌하면 코드·PRD를 따른다.
+
+## 코드 변경
+
+- 동일 디렉터리 기존 스타일(따옴표, 세미콜론, 컴포넌트 패턴)에 맞출 것.
+- 시크릿·서비스 롤 키를 클라이언트 번들에 넣지 말 것.
+- 기능 변경 시 `docs/PRD.md`·`docs/MILESTONES.md` 해당 절과 `date` 갱신 검토.
+
+## 검증
+
+기본은 `npm run verify:focus-feed`로 확인하고 종료 전 `npm run vhk:policy`를 실행.
+
+## VHK
+
+- 직접 `vhk`/`vhk.cmd`/`npx vhk`를 실행하지 말고 `npm run vhk -- <command>` 사용.
+- VHK 자체 crash·오탐·미탐·예상 밖 파일 변경은 `npm run vhk:incident -- ...`와 `npm run vhk:draft -- <id>`로 기록.
+- draft 공개 범위를 사용자에게 보여주고 명시적 승인 후 `npm run vhk:report -- <id> --approved`로 upstream GitHub 이슈 등록.
+- 이슈 URL이 연결되지 않은 확인된 VHK 결함이 있으면 완료 처리 금지.
+- 프로젝트 오류와 VHK 도구 결함을 구분하고 시크릿이 포함된 로그를 이슈에 올리지 말 것.
+- `vhk sync`, `save`, `undo`, `deploy`, `publish`, `migrate`, `start`, `init`, `mcp-init`은 사용자 승인 전 금지.
