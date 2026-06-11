@@ -6,8 +6,8 @@
       "discoveredAt": "2026-06-11T04:44:06.000Z",
       "vhkVersion": "2.5.1",
       "title": "secure scan false positives and Python api_key false negative",
-      "status": "pending",
-      "issueUrl": null
+      "status": "reported",
+      "issueUrl": "https://github.com/byh3071-cpu/vhk/issues/258"
     }
   ]
 }
