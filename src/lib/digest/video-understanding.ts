@@ -24,12 +24,19 @@ export type VideoUnderstandingResult =
   | { ok: true; text: string }
   | { ok: false; kind: GeminiFailureKind };
 
+/** fileUri에 unescaped 삽입되므로 lib 차원에서도 형식을 강제 (방어 심층화) */
+const VIDEO_ID_PATTERN = /^[\w-]{5,20}$/;
+
 export async function generateDigestTextFromVideoUrl(args: {
   videoId: string;
   title?: string;
   channel?: string | null;
   durationSeconds?: number | null;
 }): Promise<VideoUnderstandingResult> {
+  if (!VIDEO_ID_PATTERN.test(args.videoId)) {
+    console.error("[DigestVideo] invalid videoId rejected:", args.videoId.slice(0, 30));
+    return { ok: false, kind: "unavailable" };
+  }
   if (!process.env.GEMINI_API_KEY) return { ok: false, kind: "missing_key" };
 
   const durationHint =

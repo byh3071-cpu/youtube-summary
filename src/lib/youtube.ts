@@ -139,7 +139,7 @@ export interface VideoDetailsMap {
   isLive: Record<string, boolean>;
 }
 
-async function fetchVideoDetails(videoIds: string[]): Promise<VideoDetailsMap> {
+export async function fetchVideoDetails(videoIds: string[]): Promise<VideoDetailsMap> {
   const empty = { durationSeconds: {}, isLive: {} };
   if (!hasUsableApiKey(YOUTUBE_API_KEY)) return empty;
   if (videoIds.length === 0) return empty;

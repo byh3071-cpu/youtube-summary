@@ -126,6 +126,7 @@ export async function getCachedDigest(videoId: string): Promise<CachedDigest | n
   }
 }
 
+/** @returns 캐시 저장 성공 여부 — 실패 시 호출부가 사용량 차감을 건너뛴다 (재생성 비용 이중 청구 방지) */
 export async function saveDigest(args: {
   videoId: string;
   digest: VideoDigest;
@@ -134,9 +135,9 @@ export async function saveDigest(args: {
   chunkCount: number;
   degraded: boolean;
   failedChunks: number;
-}): Promise<void> {
+}): Promise<boolean> {
   const table = getMutationTable("video_digests");
-  if (!table) return;
+  if (!table) return false;
   try {
     const { error } = await table.upsert(
       {
@@ -151,8 +152,13 @@ export async function saveDigest(args: {
       },
       { onConflict: "video_id,schema_version" },
     );
-    if (error) console.error("[DigestStore] saveDigest failed", error.message ?? error);
+    if (error) {
+      console.error("[DigestStore] saveDigest failed", error.message ?? error);
+      return false;
+    }
+    return true;
   } catch (e) {
     console.error("[DigestStore] saveDigest failed", e);
+    return false;
   }
 }

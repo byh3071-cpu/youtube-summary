@@ -5,6 +5,7 @@ import {
   getStructuredVideoContextCached,
   saveDigest,
 } from "@/lib/digest/store";
+import { fetchVideoDetails } from "@/lib/youtube";
 
 export const dynamic = "force-dynamic";
 /** 긴 영상은 맵-리듀스로 수 분이 걸릴 수 있음 */
@@ -51,12 +52,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ elapsedMs: Date.now() - startedAt, ok: false, error: context.error });
   }
 
+  // 실제 action(runGeneration)과 동일하게 서버에서 duration을 재조회해
+  // 환각 가드(maxSeconds)가 동일하게 적용되도록 한다. ?duration은 폴백.
   const durationParam = Number(searchParams.get("duration"));
-  const result = await generateVideoDigest({
-    videoId,
-    durationSeconds: Number.isFinite(durationParam) && durationParam > 0 ? durationParam : null,
-    context,
-  });
+  let durationSeconds: number | null =
+    Number.isFinite(durationParam) && durationParam > 0 ? durationParam : null;
+  try {
+    const details = await fetchVideoDetails([videoId]);
+    const serverDuration = details.durationSeconds[videoId];
+    if (typeof serverDuration === "number" && serverDuration > 0) durationSeconds = serverDuration;
+  } catch {
+    /* 폴백: 쿼리 값 또는 null */
+  }
+  const result = await generateVideoDigest({ videoId, durationSeconds, context });
   if (!result.ok) {
     return NextResponse.json({ elapsedMs: Date.now() - startedAt, ok: false, error: result.message });
   }

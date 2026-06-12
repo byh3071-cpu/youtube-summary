@@ -82,10 +82,8 @@ NotebookLM식 "엑기스 추출" 기능을 새로 만들었다. 영상 전체를
 - 피드 SSR에 딥다이브 버튼 60개 렌더 확인
 
 ### ❌ / ⚠️ 미완·미확인
-1. **007 마이그레이션 미적용** — `source_mode='video'` INSERT가 여전히 CHECK 위반(400).
-   미적용 시 영상 모드 디제스트가 캐시 안 됨(매번 재생성). **사용자가 SQL 실행해야 함.**
-   → `docs/supabase-migrations/007_video_digest_video_mode.sql` 내용을
-   `https://supabase.com/dashboard/project/olacbbfblhwssbcmradm/sql/new` 에서 Run.
+1. **✅ 007 마이그레이션 적용 완료** (2026-06-12 확인) — `source_mode='video'` INSERT 201.
+   video 모드 디제스트가 정상 캐시됨(70분 영상 video 모드 저장·재히트 실측).
 2. **Vercel `SUPABASE_SERVICE_ROLE_KEY`** — 로컬은 secret 키로 교체·검증됨.
    Vercel 값은 API로 못 읽음. secret 키 저장이 마지막 Redeploy(14:27 KST) 이후라면 한 번 더 Redeploy 필요.
 3. **⚠️ Vercel 플랜 maxDuration 타임아웃 (배포 시 핵심)** — debug-digest 라우트와 디제스트 서버 액션은
@@ -93,8 +91,9 @@ NotebookLM식 "엑기스 추출" 기능을 새로 만들었다. 영상 전체를
    배포하면 **긴 영상 딥다이브가 프로덕션에서 타임아웃**한다. `maxDuration=300`을 코드에 적어도 Hobby는
    무시. 단기 영상(<60s Gemini)·캐시 히트는 동작. → Vercel Fluid Compute 활성화 또는 Pro 플랜 필요.
    특히 007 미적용 상태에서는 video 모드가 캐시 안 돼 매번 재생성=매번 타임아웃 위험.
-4. **브라우저 실제 조작 미검증** — `/api/debug-digest`로 파이프라인만 검증. 드로어 클릭→시킹,
-   키워드→필터, 오토스크롤은 코드 경로만 확인했고 실제 클릭 테스트 안 함.
+4. **✅ 브라우저 실사용 스모크 통과** (2026-06-12, Playwright) — 피드에 딥다이브 버튼 60개,
+   드로어 열림·헤더·듣기·닫기 렌더, ESC 닫힘, JS 크래시 0. (익명 사용자라 일부 영상은
+   "다시 시도" 에러로 graceful 처리됨 — 로그인 상태의 시킹·키워드 필터 수동 확인은 권장 잔여.)
 5. **드로어가 항상 영상 이해 경로** — 현재 자막을 못 가져오므로 `chunking.ts`의 맵리듀스 경로는
    사실상 죽은 코드. 자막이 되살아나면(서드파티 API 등) 활성화됨.
 6. **transcript(자막) 모드 실검증 미완** — 자막 있는 영상을 못 찾아 청크 맵-리듀스 경로는 단위 테스트만
@@ -178,27 +177,29 @@ npm run lint; npm run build
 
 ---
 
-## 7. 코드 리뷰 결과 (2026-06-11, high effort — 나중에 수정할 항목)
+## 7. 코드 리뷰 결과 (2026-06-11, high effort)
 
-디제스트 파일에 대한 코드 리뷰를 1회 수행했다. **P0 없음.** 아래는 다음 세션이 고칠 목록.
+> **2026-06-12 갱신: 아래 P1 2건·P2 3건 전부 수정 완료** (VHK 2.6.0 기반 후속 작업).
+> 수정 후 단위테스트 51개·lint·build·VHK verify(4/4)·시크릿 스캔·vhk:policy 전부 PASS.
 
-### P1 — 캐시 저장 실패 시 사용량 이중 차감 + 재실행
-`src/app/actions/digest.ts:90-99` + `store.ts:saveDigest`
-`saveDigest`가 에러를 삼키고 void 반환 → 그 후 무조건 `incrementUsage`. 저장 실패(007 미적용·RLS·일시
-장애) 시 매 요청이 캐시 미스로 Gemini 전체 파이프라인을 재실행하고 매번 사용량 차감. **현재 007 미적용
-상태가 정확히 이 경로** — video 모드는 저장 실패라 매번 재생성.
-→ 수정: `saveDigest`가 성공 여부 반환, 실패 시 명확히 로깅(이미 로깅은 함). 근본 해결은 007 적용.
+디제스트 파일에 대한 코드 리뷰를 1회 수행했다. **P0 없음.** 아래 항목은 **✅ 수정 완료**.
 
-### P1 — 동시 첫 요청이 둘 다 캐시 미스 → 둘 다 전체 파이프라인 실행
-`src/app/actions/digest.ts:66-99`
-같은 미캐시 영상을 동시에 열면(더블클릭·두 탭) 둘 다 `getCachedDigest`=null → 둘 다 영상 이해 호출.
-드로어 클라이언트는 `requestedRef`로 자체 더블파이어를 막으므로 실제 위험은 탭/인스턴스 간뿐. 개인용엔
-허용 범위. → 수정(선택): 인프로세스 in-flight Promise 맵으로 videoId별 dedupe, 또는 주석으로 수용 명시.
+### ✅ P1 — 캐시 저장 실패 시 사용량 이중 차감 + 재실행 (수정됨)
+`saveDigest`가 이제 `boolean` 반환. 액션은 **저장 성공 시에만 `incrementUsage`** 호출.
+근본 원인이던 007도 적용 완료(아래 3절).
 
-### P2 — 단일패스/리듀스 경로에 타임스탬프 환각 가드(maxSeconds) 미적용
-`generate.ts:68,72` (runSinglePass), 리듀스 호출도 maxSeconds 누락. 영상 이해 경로만 maxSeconds 전달.
-자막 모드의 LLM 환각 타임스탬프가 영상 끝을 넘어도 안 잘림 → 라디오가 영상 끝 너머로 시킹.
-→ 수정: `runSinglePass`/리듀스에도 durationSeconds 전달.
+### ✅ P1 — 동시 첫 요청 race (수정됨)
+`digest.ts`에 `inFlightGenerations` Map 추가 — 같은 videoId 동시 요청은 생성·저장을 1회로 dedupe,
+후속 요청은 같은 Promise 공유. 사용량은 최초 호출자(isInitiator)만 차감.
+추가로 액션이 **클라이언트 durationSeconds를 신뢰하지 않고 `fetchVideoDetails`로 서버 재조회** —
+비용 가드(3시간)·환각 가드(maxSeconds)가 조작 불가. debug-digest 라우트도 동일하게 재조회하도록 수정.
+
+### ✅ P2 — 단일패스/리듀스 maxSeconds (수정됨)
+`runSinglePass`·리듀스 경로에도 `maxSeconds` 전달(자막 모드는 마지막 자막 offset+120s 기준).
+`parse.test.ts`에 환각 타임스탬프 null 처리 단위테스트 2개 추가. 70분 영상 end-to-end 재검증 시 초과 ts 0개.
+
+### ✅ P2 — lib videoId 검증 (수정됨)
+`generateDigestTextFromVideoUrl`에 `VIDEO_ID_PATTERN` 검증 추가(fileUri unescaped 삽입 방어 심층화).
 
 ### P2 — 라디오 시킹 600ms 고정 지연이 느린 연결에서 시킹 누락 가능
 `FloatingRadioPlayer.tsx:391-394`

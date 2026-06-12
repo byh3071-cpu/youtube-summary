@@ -56,8 +56,11 @@ async function runSinglePass(args: {
   channel?: string | null;
   mode: "transcript" | "snippet";
   text: string;
+  /** 타임스탬프 환각 가드용 영상 길이(초) — 자막 모드에서도 적용 */
+  maxSeconds?: number;
 }): Promise<DigestGenResult> {
   const prompt = buildDigestSinglePassPrompt(args);
+  const parseOpts = { hasTimestamps: args.mode === "transcript", maxSeconds: args.maxSeconds };
   let res = await callGemini(prompt, "Digest");
   if (!res.ok && !isFatalKind(res.kind)) {
     await sleep(MAP_RETRY_DELAY_MS);
@@ -65,11 +68,11 @@ async function runSinglePass(args: {
   }
   if (!res.ok) return { ok: false, message: geminiFailureMessage(res.kind) };
 
-  let digest = safeParseVideoDigest(res.text, { hasTimestamps: args.mode === "transcript" });
+  let digest = safeParseVideoDigest(res.text, parseOpts);
   if (!digest) {
     const retry = await callGemini(prompt + PURE_JSON_RETRY_HINT, "Digest");
     if (retry.ok) {
-      digest = safeParseVideoDigest(retry.text, { hasTimestamps: args.mode === "transcript" });
+      digest = safeParseVideoDigest(retry.text, parseOpts);
     }
   }
   if (!digest) {
@@ -138,6 +141,10 @@ export async function generateVideoDigest(args: {
     return runSinglePass({ title, channel, mode: "snippet", text: context.text });
   }
 
+  // 자막 모드의 환각 가드 길이: 명시 duration 우선, 없으면 마지막 자막 시각 + 여유
+  const lastLineOffset = context.lines[context.lines.length - 1]?.offset ?? 0;
+  const transcriptMaxSeconds = durationSeconds ?? (lastLineOffset > 0 ? lastLineOffset + 120 : undefined);
+
   const chunks = chunkTranscript(context.lines);
   if (chunks.length === 0) {
     return { ok: false, message: "분석할 자막 내용이 없습니다." };
@@ -148,6 +155,7 @@ export async function generateVideoDigest(args: {
       channel,
       mode: "transcript",
       text: renderLines(context.lines),
+      maxSeconds: transcriptMaxSeconds,
     });
   }
 
@@ -187,15 +195,16 @@ export async function generateVideoDigest(args: {
   }
 
   // 리듀스 단계
+  const reduceParseOpts = { hasTimestamps: true, maxSeconds: transcriptMaxSeconds };
   const reducePrompt = buildDigestReducePrompt({ title, channel, parts });
   let reduceRes = await callGemini(reducePrompt, "DigestReduce");
-  let digest = reduceRes.ok ? safeParseVideoDigest(reduceRes.text, { hasTimestamps: true }) : null;
+  let digest = reduceRes.ok ? safeParseVideoDigest(reduceRes.text, reduceParseOpts) : null;
   if (!digest) {
     if (reduceRes.ok === false && isFatalKind(reduceRes.kind)) {
       return { ok: false, message: geminiFailureMessage(reduceRes.kind) };
     }
     reduceRes = await callGemini(reducePrompt + PURE_JSON_RETRY_HINT, "DigestReduce");
-    digest = reduceRes.ok ? safeParseVideoDigest(reduceRes.text, { hasTimestamps: true }) : null;
+    digest = reduceRes.ok ? safeParseVideoDigest(reduceRes.text, reduceParseOpts) : null;
   }
   if (!digest) {
     return {
