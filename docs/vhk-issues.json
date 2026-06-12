@@ -3,11 +3,19 @@
   "issues": [
     {
       "id": "20260611T044406Z-600856a4",
-      "discoveredAt": "2026-06-11T04:44:06.000Z",
+      "discoveredAt": "2026-06-11T04:44:06.742Z",
       "vhkVersion": "2.5.1",
       "title": "secure scan false positives and Python api_key false negative",
-      "status": "pending",
-      "issueUrl": null
+      "status": "reported",
+      "issueUrl": "https://github.com/byh3071-cpu/vhk/issues/258"
+    },
+    {
+      "id": "20260612T083443Z-0ad5be27",
+      "discoveredAt": "2026-06-12T08:34:43.138Z",
+      "vhkVersion": "2.5.1",
+      "title": "Project gate failed while running VHK",
+      "status": "reported",
+      "issueUrl": "https://github.com/byh3071-cpu/vhk/issues/258"
     }
   ]
 }
