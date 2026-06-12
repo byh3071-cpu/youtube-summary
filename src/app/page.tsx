@@ -13,6 +13,10 @@ import type { FeedSource } from "@/lib/sources";
 // 페이지는 항상 동적 렌더링 (cookies, searchParams 사용).
 // YouTube/RSS API 응답은 개별 fetch()의 { next: { revalidate: 7200 } }로 캐싱.
 export const dynamic = "force-dynamic";
+// 딥다이브 디제스트 서버 액션(generateVideoDigestAction)이 이 라우트 함수에서 실행된다.
+// Gemini 영상 이해는 긴 영상에서 1~2분 걸리므로 기본 함수 제한(~15s)을 넘긴다.
+// Vercel Pro/Fluid는 이 값까지 허용(최대 300s), Hobby는 60s로 캡됨(긴 영상은 Pro 필요).
+export const maxDuration = 300;
 // YouTube 채널 수가 많지 않으므로, 프로필 이미지는 여유 있게 최대 64개까지 조회
 const MAX_YOUTUBE_AVATAR_RESOLVE = 64;
 
