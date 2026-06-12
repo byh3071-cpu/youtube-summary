@@ -1,10 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { MessageCircle, X, Loader2, Trash2, Copy, ListTodo } from "lucide-react";
 import { feedQAAction } from "@/app/actions/feed-qa";
 import type { FeedQAHistoryTurn } from "@/app/actions/feed-qa";
 import { useBodyScrollLock } from "@/lib/body-scroll-lock";
+
+const FOCUSABLE =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+function getFocusables(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (el) => !el.hasAttribute("disabled") && el.offsetParent !== null,
+  );
+}
 
 type Props = {
   selectedSourceId?: string;
@@ -38,16 +47,68 @@ export default function FeedQADrawer({ selectedSourceId }: Props) {
   const [pending, startTransition] = useTransition();
 
   const key = useMemo(() => storageKey(selectedSourceId), [selectedSourceId]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previousActiveRef = useRef<HTMLElement | null>(null);
 
   useBodyScrollLock(open);
 
+  // Escape 닫기 + 포커스 트랩(Tab 순환). 포커스 트랩이 없으면 Tab으로 오버레이 아래
+  // 라디오 푸터 버튼에 도달해 다른 드로어를 열 수 있어, 그 상태에서 Esc 한 번에 두 레이어가
+  // 동시에 닫히는 문제가 생긴다 — 트랩으로 그 경로 자체를 차단한다.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      // IME 조합 중(한글 등) Esc/Tab은 조합 처리용 — 드로어를 닫거나 포커스를 옮기지 않는다.
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      const panel = panelRef.current;
+      if (e.key !== "Tab" || !panel) return;
+      const focusables = getFocusables(panel);
+      if (focusables.length === 0) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      // 패널 밖에 포커스가 있으면 다시 안으로 끌어온다 (오버레이 아래 요소로 새는 것 방지).
+      if (!panel.contains(active)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+        return;
+      }
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  // open 시 패널 안 첫 요소로 포커스, 닫힐 때 직전 포커스로 복귀.
+  useEffect(() => {
+    if (!open) return;
+    previousActiveRef.current = document.activeElement as HTMLElement | null;
+    const id = setTimeout(() => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = getFocusables(panel);
+      (focusables[0] ?? panel).focus();
+    }, 0);
+    return () => {
+      clearTimeout(id);
+      requestAnimationFrame(() => {
+        previousActiveRef.current?.focus?.();
+      });
+    };
   }, [open]);
 
   useEffect(() => {
@@ -154,10 +215,12 @@ export default function FeedQADrawer({ selectedSourceId }: Props) {
             onClick={() => setOpen(false)}
           />
           <div
+            ref={panelRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby="feed-qa-title"
-            className="relative flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-2xl border border-(--notion-border) bg-(--notion-bg) pb-[env(safe-area-inset-bottom,0px)] shadow-2xl sm:max-h-[min(36rem,calc(100vh-6rem))] sm:rounded-2xl sm:pb-0"
+            className="relative flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-2xl border border-(--notion-border) bg-(--notion-bg) pb-[env(safe-area-inset-bottom,0px)] shadow-2xl outline-none sm:max-h-[min(36rem,calc(100vh-6rem))] sm:rounded-2xl sm:pb-0"
           >
             <div className="flex items-center justify-between border-b border-(--notion-border) px-4 py-3">
               <h2 id="feed-qa-title" className="text-sm font-semibold text-(--notion-fg)">

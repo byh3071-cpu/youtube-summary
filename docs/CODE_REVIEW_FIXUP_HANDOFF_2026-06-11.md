@@ -185,8 +185,31 @@ CONFIRMED(코드로 재현 구성 가능) / PLAUSIBLE(현실적이나 미반증)
 
 ## 완료 기준
 
-- [ ] FIX-1 ~ FIX-7 수정 + 관련 테스트 추가/갱신
-- [ ] FIX-8 ~ FIX-10은 현재 diff 보존 원칙 하에 최소 수정 (충돌 시 보고 후 중단)
-- [ ] FIX-11 적용 (FIX-4와 함께)
-- [ ] `npm run lint` / `npm run test:unit`(기준 47+α) / `npm run build` / `npm run test:e2e`(기준 29+α) 전부 통과
-- [ ] 이 문서의 체크박스 갱신 + 수정 결과를 `docs/WORK_REPORT_2026-06-11_QA_REMEDIATION.md`에 추가 절로 기록
+- [x] FIX-1 ~ FIX-7 수정 + 관련 테스트 추가/갱신
+- [x] FIX-8 ~ FIX-10은 현재 diff 보존 원칙 하에 최소 수정 (충돌 시 보고 후 중단)
+- [x] FIX-11 적용 (FIX-4와 함께)
+- [x] `npm run lint` / `npm run test:unit`(49) / `npm run build` / `npm run test:e2e`(29) 전부 통과 + `vhk verify` PASS(4/4)
+- [x] 이 문서의 체크박스 갱신 + 수정 결과를 `docs/WORK_REPORT_2026-06-11_QA_REMEDIATION.md`에 추가 절로 기록
+
+## 2026-06-12 처리 결과
+
+11건 전부 적용·검증 완료. 검증: lint 0 · unit 49/49 · build · e2e 29/29 · `vhk verify` 4/4 PASS.
+
+| FIX | 처리 | 핵심 변경 |
+|---|---|---|
+| 1 | ✅ | `stripHtmlTags`를 HTML 태그명 화이트리스트로 좁힘. 제목은 `htmlToPlainText(.., {stripTags:false})`로 디코딩만 — `Vec<T>`·`x < 10` 보존. 테스트 +2 |
+| 2 | ✅ | 동기화 실제 수행(로그인) 시에만 `SYNCED_FLAG` 기록. `onAuthStateChange(SIGNED_IN)`로 같은 탭 로그인 시 재동기화 |
+| 3 | ✅ | run-e2e 종료코드 보정을 `win32 && !CI`로 한정 — CI(Linux)는 Playwright 코드 그대로 전달 |
+| 4 | ✅ | ModalTransition·FloatingRadioPlayer·MobileNavDrawer·FeedQADrawer·VideoDigestDrawer·KeywordFilter Escape에 `isComposing/keyCode 229` 가드 |
+| 5 | ✅ | RadioPlaylistDrawer: 비로그인 시 저장 버튼 → "로그인하고 저장" 링크 + 안내, 401 왕복 제거 |
+| 6 | ✅ | sw.js 캐시 3분리(precache/static/img) + `putAndTrim`(static 100·img 150 상한), v3로 구캐시 정리 |
+| 7 | ✅ | body-scroll-lock: 잠금 시 pathname 저장, 같은 경로일 때만 scrollTo 복원 |
+| 8 | ✅(미커밋) | digest.ts: 캐시 조회를 한도·레이트리밋 검사 앞으로. **digest.ts가 병행 미커밋 작업과 엉켜 있어 별도 커밋에서 제외 — 적용 상태로 두어 digest 작업과 함께 커밋 예정** |
+| 9 | ✅ | FloatingRadioPlayer: 외부 시크를 고정 600ms→`getDuration()>0` 폴링(상한 ~5s) 후 적용, 영상 변경 시 폐기 |
+| 10 | ✅ | VideoDigestDrawer z-90→z-60 (Q&A z-70 모달 아래) |
+| 11 | ✅ | FeedQADrawer 포커스 트랩(Tab 순환·초기 포커스·복귀) 추가 → 오버레이 아래로 포커스 누출·다중 레이어 동시 Esc 차단 |
+
+**커밋 메모**: FIX-8(`src/app/actions/digest.ts`)은 작업 트리에서 병행 digest 작업
+(runGeneration·서버 duration 재조회·`youtube.ts` `fetchVideoDetails` export 의존)과
+한 파일에 섞여, 단독 커밋 시 미완 병행 작업이 끌려오거나 CI import가 깨진다. 그래서
+이번 커밋(10건)에서 제외하고 적용 상태로 남겼다 — digest 작업 커밋 시 함께 올라간다.

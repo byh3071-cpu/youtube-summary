@@ -52,8 +52,9 @@ export async function fetchRssFeed(url: string, sourceName: string): Promise<Fee
         return items.map((item) => {
             return {
                 id: getStableRssId(item, sourceName),
-                // RSS 원문의 `&quot;` `&#039;` `&amp;` 같은 엔티티가 화면에 그대로 노출되지 않도록 디코딩
-                title: htmlToPlainText(item.title || "") || "No title",
+                // 제목은 플레인 텍스트가 원칙 — 엔티티만 디코딩하고 태그 제거는 하지 않아
+                // `Vec<T>`·`x < 10` 같은 리터럴 꺾쇠를 보존한다. (`&quot;`/`&#039;`/`&amp;` 디코딩)
+                title: htmlToPlainText(item.title || "", { stripTags: false }) || "No title",
                 link: item.link || url,
                 pubDate: toIsoDate(item.pubDate),
                 source: "RSS",

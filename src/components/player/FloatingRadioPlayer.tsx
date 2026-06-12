@@ -332,6 +332,7 @@ export default function FloatingRadioPlayer() {
   useEffect(() => {
     if (!fullPlayerOpen) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === "Escape") {
         setFullPlayerOpen(false);
         qaLog.radio.fullPlayerClose();
@@ -387,12 +388,43 @@ export default function FloatingRadioPlayer() {
     const pending = pendingSeekRef.current;
     if (!pending || !playerReady) return;
     if (radio?.currentItem?.videoId !== pending.videoId) return;
-    // loadVideoById 직후에는 시킹이 무시될 수 있어 짧게 지연
-    const t = setTimeout(() => {
-      seekToSeconds(pending.seconds);
-      pendingSeekRef.current = null;
-    }, 600);
-    return () => clearTimeout(t);
+
+    // loadVideoById 직후에는 새 영상이 아직 로드 전이라 시킹이 무시되고, getDuration()도
+    // 0/이전 영상 길이를 돌려준다. 고정 지연 대신 getDuration()>0(= 새 영상 메타데이터 로드 완료)이
+    // 될 때까지 폴링한 뒤 적용해, 시킹 유실과 잘못된 진행률 계산을 막는다.
+    let cancelled = false;
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const MAX_ATTEMPTS = 25; // ~5초 (200ms 간격)
+
+    const tryApply = () => {
+      if (cancelled) return;
+      // 폴링 중 영상이 또 바뀌면 이 보류는 폐기
+      if (radioRef.current?.currentItem?.videoId !== pending.videoId) {
+        pendingSeekRef.current = null;
+        return;
+      }
+      const p = playerRef.current as { getDuration?: () => number } | null;
+      const duration = p && typeof p.getDuration === "function" ? p.getDuration() : 0;
+      if (duration > 0) {
+        seekToSeconds(pending.seconds);
+        pendingSeekRef.current = null;
+        return;
+      }
+      attempts += 1;
+      if (attempts >= MAX_ATTEMPTS) {
+        // 끝내 준비되지 않으면 잘못된 duration으로 적용하지 않고 보류를 폐기
+        pendingSeekRef.current = null;
+        return;
+      }
+      timer = setTimeout(tryApply, 200);
+    };
+
+    timer = setTimeout(tryApply, 100);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [playerReady, radio?.currentItem?.videoId, seekToSeconds]);
 
   const handleSeek = useCallback((percent: number) => {

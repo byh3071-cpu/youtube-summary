@@ -205,6 +205,7 @@ export default function KeywordFilter({
               value={newKeyword}
               onChange={(e) => setNewKeyword(e.target.value)}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                 if (e.key === "Escape") {
                   handleCancelAdd();
                 }

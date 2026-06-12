@@ -106,6 +106,7 @@ export default function VideoDigestDrawer({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
@@ -196,7 +197,9 @@ export default function VideoDigestDrawer({
     <aside
       role="complementary"
       aria-label="영상 딥다이브"
-      className="fixed inset-x-2 bottom-24 top-14 z-90 flex flex-col overflow-hidden rounded-2xl border border-(--notion-border) bg-(--notion-bg) shadow-2xl sm:inset-x-auto sm:right-3 sm:w-[440px]"
+      // z-60: 라디오 푸터(z-50) 위, 모달 다이얼로그(Q&A z-70 등) 아래 — 모달이 열리면
+      // 오버레이가 이 패널을 덮어 aria-modal 의미론을 깨지 않는다.
+      className="fixed inset-x-2 bottom-24 top-14 z-60 flex flex-col overflow-hidden rounded-2xl border border-(--notion-border) bg-(--notion-bg) shadow-2xl sm:inset-x-auto sm:right-3 sm:w-[440px]"
     >
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-2 border-b border-(--notion-border) px-4 py-3">

@@ -13,6 +13,11 @@ import path from "node:path";
 const LAST_RUN_FILE = path.join("test-results", ".last-run.json");
 const startedAt = Date.now();
 
+// 종료 코드 오염 보정은 진단된 Windows 로컬 환경(node v24 + 네이티브 teardown 크래시)에서만 적용한다.
+// CI(Linux)나 그 외 환경에서는 Playwright 종료 코드를 그대로 전달해, 결과 기록 후 발생하는
+// 진짜 인프라 실패(teardown·reporter 오류 등)가 녹색으로 위장되지 않게 한다.
+const ALLOW_EXIT_CODE_OVERRIDE = process.platform === "win32" && !process.env.CI;
+
 const cacheDir = mkdtempSync(path.join(os.tmpdir(), "pw-transform-"));
 
 const child = spawn(
@@ -27,20 +32,22 @@ const child = spawn(
 child.on("close", (code) => {
   if (code === 0) process.exit(0);
 
-  // 종료 코드가 0이 아니어도, 이번 실행이 기록한 결과 파일이 "passed"면 성공으로 판정.
-  try {
-    const stat = statSync(LAST_RUN_FILE);
-    if (stat.mtimeMs >= startedAt) {
-      const lastRun = JSON.parse(readFileSync(LAST_RUN_FILE, "utf8"));
-      if (lastRun.status === "passed") {
-        console.warn(
-          `[run-e2e] 테스트는 모두 통과했으나 프로세스 종료 코드(${code})가 오염되어 결과 파일로 성공 판정 (Windows 환경 이슈).`,
-        );
-        process.exit(0);
+  // (Windows 로컬 한정) 종료 코드가 오염돼도 이번 실행이 기록한 결과 파일이 "passed"면 성공 판정.
+  if (ALLOW_EXIT_CODE_OVERRIDE) {
+    try {
+      const stat = statSync(LAST_RUN_FILE);
+      if (stat.mtimeMs >= startedAt) {
+        const lastRun = JSON.parse(readFileSync(LAST_RUN_FILE, "utf8"));
+        if (lastRun.status === "passed") {
+          console.warn(
+            `[run-e2e] 테스트는 모두 통과했으나 프로세스 종료 코드(${code})가 오염되어 결과 파일로 성공 판정 (Windows 환경 이슈).`,
+          );
+          process.exit(0);
+        }
       }
+    } catch {
+      // 결과 파일이 없으면 아래에서 실패 처리
     }
-  } catch {
-    // 결과 파일이 없으면 아래에서 실패 처리
   }
 
   process.exit(code === null ? 1 : Math.min(Math.abs(code), 255) || 1);

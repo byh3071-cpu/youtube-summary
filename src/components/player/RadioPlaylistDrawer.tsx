@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { qaLog } from "@/lib/qa-log";
 import { X, Trash2 } from "lucide-react";
 import { AutoAnimateList } from "@/components/ui/AutoAnimateList";
@@ -16,11 +18,43 @@ export function RadioPlaylistDrawer({ drawerOpen, setDrawerOpen }: RadioPlaylist
   const radio = useRadioQueueOptional();
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  // null = 확인 중. 플레이리스트 저장은 로그인 전용이므로, 비로그인에는 저장 대신 로그인 안내를 보인다.
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setIsLoggedIn(false);
+      return;
+    }
+    let mounted = true;
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (mounted) setIsLoggedIn(!!session);
+      })
+      .catch(() => {
+        if (mounted) setIsLoggedIn(false);
+      });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) setIsLoggedIn(!!session);
+    });
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   if (!radio) return null;
 
   const handleSavePlaylist = async () => {
     if (!radio.queue.length || saving) return;
+    if (isLoggedIn === false) {
+      setSaveMessage("플레이리스트 저장은 로그인 후 이용할 수 있어요.");
+      return;
+    }
     setSaving(true);
     setSaveMessage(null);
     try {
@@ -60,14 +94,23 @@ export function RadioPlaylistDrawer({ drawerOpen, setDrawerOpen }: RadioPlaylist
         <div className="sticky top-0 border-b border-(--notion-border) bg-(--notion-gray)">
           <div className="grid grid-cols-3 items-center gap-2 px-4 py-4">
             <div className="flex items-center justify-start">
-              <button
-                type="button"
-                onClick={handleSavePlaylist}
-                disabled={saving || radio.queue.length === 0}
-                className="inline-flex items-center rounded-full border border-(--notion-border) bg-(--notion-bg) px-3 py-1.5 text-xs font-semibold text-(--notion-fg)/80 shadow-sm transition-colors hover:bg-(--notion-hover) disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? "저장 중…" : "플레이리스트 저장"}
-              </button>
+              {isLoggedIn === false ? (
+                <Link
+                  href="/login?next=/"
+                  className="inline-flex items-center rounded-full border border-(--notion-border) bg-(--notion-bg) px-3 py-1.5 text-xs font-semibold text-(--notion-fg)/80 shadow-sm transition-colors hover:bg-(--notion-hover)"
+                >
+                  로그인하고 저장
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSavePlaylist}
+                  disabled={saving || radio.queue.length === 0}
+                  className="inline-flex items-center rounded-full border border-(--notion-border) bg-(--notion-bg) px-3 py-1.5 text-xs font-semibold text-(--notion-fg)/80 shadow-sm transition-colors hover:bg-(--notion-hover) disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? "저장 중…" : "플레이리스트 저장"}
+                </button>
+              )}
             </div>
             <h3 className="text-center text-lg font-semibold text-(--notion-fg)">재생 대기열</h3>
             <div className="flex items-center justify-end">
@@ -81,11 +124,15 @@ export function RadioPlaylistDrawer({ drawerOpen, setDrawerOpen }: RadioPlaylist
               </button>
             </div>
           </div>
-          {saveMessage && (
+          {saveMessage ? (
             <p className="px-4 pb-2 text-[11px] text-(--notion-fg)/65" aria-live="polite">
               {saveMessage}
             </p>
-          )}
+          ) : isLoggedIn === false && radio.queue.length > 0 ? (
+            <p className="px-4 pb-2 text-[11px] text-(--notion-fg)/55">
+              로그인하면 현재 대기열을 플레이리스트로 저장할 수 있어요.
+            </p>
+          ) : null}
         </div>
         <AutoAnimateList as="ul" className="divide-y divide-(--notion-border)">
           {radio.queue.map((item, index) => (

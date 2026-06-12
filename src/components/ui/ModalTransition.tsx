@@ -52,6 +52,8 @@ export function ModalTransition({
     previousActiveRef.current = document.activeElement as HTMLElement | null;
 
     const onKey = (e: KeyboardEvent) => {
+      // IME 조합 중(한글 등) Esc는 조합 취소용 — 모달을 닫거나 포커스 트랩을 건드리지 않는다.
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();

@@ -9,7 +9,7 @@ const NAMED_ENTITIES: Record<string, string> = {
   gt: ">",
   quot: '"',
   apos: "'",
-  nbsp: " ",
+  nbsp: " ",
   hellip: "…",
   mdash: "—",
   ndash: "–",
@@ -55,19 +55,43 @@ export function decodeHtmlEntities(input: string): string {
   });
 }
 
-/** HTML 태그를 제거하고 공백을 정리한다. */
+// 실제 HTML 태그명 화이트리스트. 이 목록의 태그(여닫기·자기닫기)와 주석만 제거하고,
+// `Vec<T>`·`x < 10 and y > 5` 같은 리터럴 꺾쇠 텍스트는 보존한다.
+const HTML_TAG_NAMES = [
+  "a","abbr","address","area","article","aside","audio","b","bdi","bdo","blockquote",
+  "br","button","canvas","caption","cite","code","col","colgroup","data","datalist",
+  "dd","del","details","dfn","dialog","div","dl","dt","em","embed","fieldset",
+  "figcaption","figure","footer","form","h1","h2","h3","h4","h5","h6","head","header",
+  "hgroup","hr","i","iframe","img","input","ins","kbd","label","legend","li","main",
+  "map","mark","menu","meta","nav","object","ol","optgroup","option","output","p",
+  "param","picture","pre","progress","q","rp","rt","ruby","s","samp","section","select",
+  "small","source","span","strong","style","sub","summary","sup","svg","table","tbody",
+  "td","template","textarea","tfoot","th","thead","time","tr","track","u","ul","var",
+  "video","wbr","script","noscript","path","g","rect","circle","line","polygon",
+].join("|");
+
+const HTML_TAG_RE = new RegExp(`<\\/?(?:${HTML_TAG_NAMES})\\b[^>]*>|<!--[\\s\\S]*?-->`, "gi");
+
+/**
+ * 알려진 HTML 태그와 주석만 제거한다 (공백으로 치환).
+ * 화이트리스트 방식이라 비-HTML 꺾쇠 텍스트(`Vec<T>`, `x < 10 and y > 5`)는 건드리지 않는다.
+ */
 export function stripHtmlTags(input: string): string {
   if (!input) return input;
-  return input.replace(/<[^>]*>/g, " ");
+  return input.replace(HTML_TAG_RE, " ");
 }
 
 /**
  * RSS title/summary용 플레인 텍스트 변환.
- * 순서가 중요: ① 실제 태그 제거 → ② 엔티티 디코딩.
- * (반대 순서면 `&lt;b&gt;` 같은 텍스트가 태그로 오인돼 본문이 잘릴 수 있다.
- *  디코딩으로 생긴 `<` `>`는 그대로 텍스트로 남고, React가 이스케이프해 렌더링하므로 안전.)
+ * - 기본(요약 등): 알려진 태그 제거 → 엔티티 디코딩 → 공백 정리.
+ * - `stripTags: false`(제목): 태그 제거 없이 엔티티 디코딩만. RSS 제목은 플레인 텍스트가
+ *   원칙이라 `Vec<T>` 같은 리터럴 꺾쇠를 절대 깨뜨리지 않는다.
+ * 순서가 중요: 태그 제거를 먼저 하면 디코딩으로 생긴 `<` `>`는 텍스트로 남고
+ * React가 이스케이프해 렌더링하므로 안전하다.
  */
-export function htmlToPlainText(input: string): string {
+export function htmlToPlainText(input: string, options?: { stripTags?: boolean }): string {
   if (!input) return "";
-  return decodeHtmlEntities(stripHtmlTags(input)).replace(/\s+/g, " ").trim();
+  const stripTags = options?.stripTags ?? true;
+  const tagless = stripTags ? stripHtmlTags(input) : input;
+  return decodeHtmlEntities(tagless).replace(/\s+/g, " ").trim();
 }

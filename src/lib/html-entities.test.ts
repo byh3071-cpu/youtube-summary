@@ -43,6 +43,24 @@ describe("stripHtmlTags / htmlToPlainText", () => {
     expect(stripHtmlTags("<img src=x onerror=alert(1)>safe")).toBe(" safe");
   });
 
+  it("실제 태그만 제거하고 리터럴 꺾쇠 텍스트는 보존한다 (화이트리스트)", () => {
+    // 요약에서도 비-HTML 꺾쇠는 살아남아야 한다 (FIX-1 회귀 방지)
+    expect(htmlToPlainText("works when x < 10 and y > 5")).toBe("works when x < 10 and y > 5");
+    expect(htmlToPlainText("Vec<T> generic container")).toBe("Vec<T> generic container");
+    // 알려진 태그는 여전히 제거
+    expect(htmlToPlainText("<div>a</div><span>b</span>")).toBe("a b");
+  });
+
+  it("제목은 태그 제거 없이 디코딩만 한다 (stripTags: false)", () => {
+    expect(htmlToPlainText("Understanding Vec<T> in Rust", { stripTags: false })).toBe(
+      "Understanding Vec<T> in Rust",
+    );
+    expect(htmlToPlainText("x < 10 and y > 5", { stripTags: false })).toBe("x < 10 and y > 5");
+    expect(htmlToPlainText("&quot;The Lean Startup&quot;", { stripTags: false })).toBe(
+      '"The Lean Startup"',
+    );
+  });
+
   it("빈 입력과 공백을 정리한다", () => {
     expect(htmlToPlainText("")).toBe("");
     expect(htmlToPlainText("  a\n\n b  ")).toBe("a b");

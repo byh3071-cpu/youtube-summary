@@ -5,16 +5,28 @@
 // - /_next/static/ 해시 자산: cache-first (내용 불변).
 // - 이미지 등 일반 정적 자산: stale-while-revalidate.
 // - API·인증·RSC·서버 액션은 어떤 경우에도 캐시하지 않음.
-const VERSION = "v2";
+//
+// 캐시는 3개로 분리한다 (FIX-6, 무한 누적 방지):
+// - PRECACHE: 오프라인 fallback·아이콘. 절대 트림하지 않음(offline.html이 evict되면 안 됨).
+// - STATIC : /_next/static 해시 청크. 배포가 쌓일수록 누적되므로 항목 수 상한으로 트림.
+// - IMG    : 이미지·/_next/image 변형. 상한으로 트림.
+const VERSION = "v3";
+const PRECACHE = `focus-feed-precache-${VERSION}`;
 const STATIC_CACHE = `focus-feed-static-${VERSION}`;
+const IMG_CACHE = `focus-feed-img-${VERSION}`;
+const KEEP_CACHES = new Set([PRECACHE, STATIC_CACHE, IMG_CACHE]);
+
+const MAX_STATIC_ENTRIES = 100; // 해시 청크 (여러 배포분 일부 보존)
+const MAX_IMG_ENTRIES = 150; // 채널 아바타·썸네일 등
+
 const OFFLINE_URL = "/offline.html";
-const PRECACHE = [OFFLINE_URL, "/app.webmanifest", "/icon-192.png", "/icon-512.png"];
+const PRECACHE_URLS = [OFFLINE_URL, "/app.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
-      .open(STATIC_CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
+      .open(PRECACHE)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
       .then(() => self.skipWaiting()),
   );
 });
@@ -24,11 +36,22 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key))),
+        Promise.all(keys.filter((key) => !KEEP_CACHES.has(key)).map((key) => caches.delete(key))),
       )
       .then(() => self.clients.claim()),
   );
 });
+
+// Cache Storage는 삽입 순서를 보존하므로, 상한 초과 시 가장 오래된 항목부터 제거한다(LRU 근사).
+async function putAndTrim(cacheName, request, response, maxEntries) {
+  const cache = await caches.open(cacheName);
+  await cache.put(request, response);
+  const keys = await cache.keys();
+  const overflow = keys.length - maxEntries;
+  for (let i = 0; i < overflow; i++) {
+    await cache.delete(keys[i]);
+  }
+}
 
 const STATIC_ASSET_RE = /\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|woff2?|ttf|otf|webmanifest)$/;
 
@@ -67,15 +90,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 2) 해시가 포함된 빌드 자산: cache-first.
+  // 2) 해시가 포함된 빌드 자산: cache-first + 상한 트림.
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((response) => {
           if (response.ok) {
-            const copy = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+            event.waitUntil(putAndTrim(STATIC_CACHE, request, response.clone(), MAX_STATIC_ENTRIES));
           }
           return response;
         });
@@ -84,20 +106,23 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 3) 이미지 등 일반 정적 자산: stale-while-revalidate. 정상 응답만 저장.
+  // 3) 이미지 등 일반 정적 자산: stale-while-revalidate + 상한 트림. 정상 응답만 저장.
   if (STATIC_ASSET_RE.test(url.pathname) || url.pathname.startsWith("/_next/image")) {
     event.respondWith(
-      caches.open(STATIC_CACHE).then(async (cache) => {
-        const cached = await cache.match(request);
+      (async () => {
+        const cached = await caches.match(request);
         const network = fetch(request)
           .then((response) => {
-            if (response.ok) cache.put(request, response.clone());
+            if (response.ok) {
+              event.waitUntil(
+                putAndTrim(IMG_CACHE, request, response.clone(), MAX_IMG_ENTRIES),
+              );
+            }
             return response;
           })
           .catch(() => undefined);
-        if (cached) return cached;
-        return network.then((response) => response || Response.error());
-      }),
+        return cached || (await network) || Response.error();
+      })(),
     );
     return;
   }
