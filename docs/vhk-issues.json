@@ -16,6 +16,14 @@
       "title": "Project gate failed while running VHK",
       "status": "reported",
       "issueUrl": "https://github.com/byh3071-cpu/vhk/issues/258"
+    },
+    {
+      "id": "20260612T095003Z-83e7c161",
+      "discoveredAt": "2026-06-12T09:50:03.344Z",
+      "vhkVersion": "2.6.0",
+      "title": "vhk review: goal 미설정 시 read-only 검증이 project-failure incident를 자동 생성하고 exit 1",
+      "status": "reported",
+      "issueUrl": "https://github.com/byh3071-cpu/vhk/issues/271"
     }
   ]
 }
