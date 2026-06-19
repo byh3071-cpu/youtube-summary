@@ -1,8 +1,25 @@
 import { NextResponse } from "next/server";
 import { parseYouTubeChannelInput } from "@/lib/youtube-channel-parse";
 import { resolveYouTubeChannel } from "@/lib/youtube";
+import { takeToken } from "@/lib/rate-limit";
+
+function getClientIp(request: Request): string {
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]?.trim() || "unknown";
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
 
 export async function POST(request: Request) {
+  // 비용 보호: 익명 호출이 YouTube API 쿼터를 소진하지 않도록 IP 기준 레이트리밋.
+  const ip = getClientIp(request);
+  const rl = takeToken(`resolve-channel:${ip}`, 20, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `요청이 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   try {
     const body = (await request.json()) as { input?: string };
     const input = typeof body.input === "string" ? body.input.trim() : "";

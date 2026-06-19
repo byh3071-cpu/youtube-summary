@@ -5,6 +5,7 @@ import { getPlanForUser } from "@/lib/plan";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import LogoutButton from "./LogoutButton";
+import AccountDataExport from "./AccountDataExport";
 
 export const metadata: Metadata = {
   title: "내 계정 | Focus Feed",
@@ -91,6 +92,11 @@ export default async function ProfilePage() {
 
           {/* Divider */}
           <hr className="my-4 border-(--notion-border)" />
+
+          {/* 데이터 내보내기 */}
+          <div className="mb-4">
+            <AccountDataExport />
+          </div>
 
           {/* Logout */}
           <LogoutButton />
