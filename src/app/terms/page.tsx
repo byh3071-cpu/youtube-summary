@@ -11,7 +11,7 @@ export default function TermsPage() {
       <article className="mx-auto max-w-2xl px-4 py-16">
         <h1 className="text-3xl font-bold tracking-tight">이용약관</h1>
         <p className="mt-2 text-sm text-(--notion-fg)/60">
-          시행일: 2025년 6월 1일
+          시행일: 2026년 6월 19일
         </p>
 
         <p className="mt-8 leading-relaxed text-(--notion-fg)/80">
@@ -61,7 +61,11 @@ export default function TermsPage() {
             방식이며, Stripe를 통해 결제가 처리됩니다.
           </p>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-(--notion-fg)/80">
-            <li>구독은 매월 자동 갱신되며, 언제든 해지할 수 있습니다.</li>
+            <li>
+              구독은 매월 자동 갱신됩니다. 구독 해지·결제 관리는 현재
+              문의처(focusfeed.help@gmail.com)를 통해 처리되며, 계정 내 셀프
+              해지 기능은 준비 중입니다.
+            </li>
             <li>
               결제 취소 시 해당 결제 주기 종료일까지 Pro 기능을 이용할 수
               있습니다.
@@ -105,7 +109,7 @@ export default function TermsPage() {
           <p className="mt-3 leading-relaxed text-(--notion-fg)/80">
             본 약관은 서비스 운영 상 필요한 경우 변경될 수 있으며, 변경 시 서비스
             내 공지를 통해 안내합니다. 변경된 약관에 동의하지 않는 경우 서비스
-            이용을 중단하고 탈퇴할 수 있습니다.
+            이용을 중단할 수 있으며, 계정 탈퇴는 문의처를 통해 요청할 수 있습니다.
           </p>
         </section>
 

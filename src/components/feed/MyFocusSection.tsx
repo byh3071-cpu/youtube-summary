@@ -8,7 +8,6 @@ import {
   loadBriefingCache,
   saveBriefingCache,
   clearBriefingCache,
-  wasVideoNotionPushed,
   markVideoNotionPushed,
   loadVideoNotionInfo,
 } from "@/lib/focus-feed-storage";
@@ -63,7 +62,6 @@ export default function MyFocusSection() {
   const briefingRequestId = useRef(0);
   const mountedRef = useRef(true);
   const savedFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoSyncedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     mountedRef.current = true;
@@ -80,7 +78,6 @@ export default function MyFocusSection() {
         const info = loadVideoNotionInfo(vid);
         if (info) {
           hydratedStatus[vid] = { state: "done", summaryUrl: info.summaryUrl };
-          autoSyncedRef.current.add(vid);
         }
       }
       if (Object.keys(hydratedStatus).length > 0) {
@@ -128,14 +125,11 @@ export default function MyFocusSection() {
   );
 
   const handlePushToNotion = useCallback(
-    async (entry: AiRankedRecommendation, opts: { auto?: boolean } = {}) => {
+    async (entry: AiRankedRecommendation) => {
       const videoId = entry.item.id;
       if (!videoId || entry.item.source !== "YouTube") return;
       const current = notionSync[videoId];
       if (current?.state === "syncing") return;
-      if (opts.auto && (current?.state === "done" || wasVideoNotionPushed(videoId))) {
-        return;
-      }
 
       setNotionSync((prev) => ({ ...prev, [videoId]: { state: "syncing" } }));
 
@@ -186,21 +180,8 @@ export default function MyFocusSection() {
     [notionSync],
   );
 
-  const radioPlayback = radio?.playback;
-  useEffect(() => {
-    if (!radioPlayback?.completed) return;
-    const completedId = radioPlayback.videoId;
-    if (!completedId || autoSyncedRef.current.has(completedId)) return;
-    if (!aiBriefing) return;
-    const entry = aiBriefing.find((e) => e.item.id === completedId);
-    if (!entry) return;
-    if (wasVideoNotionPushed(completedId)) {
-      autoSyncedRef.current.add(completedId);
-      return;
-    }
-    autoSyncedRef.current.add(completedId);
-    void handlePushToNotion(entry, { auto: true });
-  }, [radioPlayback?.completed, radioPlayback?.videoId, aiBriefing, handlePushToNotion]);
+  // 자동 Notion 동기화 제거: 스펙 §7 "Notion 자동 전송보다 검토 후 전송을 기본값으로"에
+  // 따라, 재생 완료 자동 푸시 대신 사용자가 "노션에 정리"를 누를 때만 동기화한다.
 
   const runBriefing = useCallback(
     async ({ forceFresh }: { forceFresh: boolean }) => {

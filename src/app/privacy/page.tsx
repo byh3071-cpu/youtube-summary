@@ -13,7 +13,7 @@ export default function PrivacyPage() {
           개인정보처리방침
         </h1>
         <p className="mt-2 text-sm text-(--notion-fg)/60">
-          시행일: 2025년 6월 1일
+          시행일: 2026년 6월 19일
         </p>
 
         <p className="mt-8 leading-relaxed text-(--notion-fg)/80">
@@ -28,6 +28,13 @@ export default function PrivacyPage() {
             <li>이메일 주소 (Google OAuth 로그인 시 제공)</li>
             <li>Google 프로필 정보 (이름, 프로필 이미지)</li>
             <li>서비스 이용 기록 및 접속 로그</li>
+            <li>
+              이용자가 추가한 YouTube 채널·RSS 소스, 북마크, 플레이리스트
+            </li>
+            <li>
+              이용자가 입력한 관심사·목표, AI 요약·인사이트·Q&amp;A 이력, 영상
+              시청 진행 기록 (대부분 이용자 브라우저에 저장)
+            </li>
           </ul>
         </section>
 
@@ -60,6 +67,16 @@ export default function PrivacyPage() {
               <strong>Google / YouTube API</strong> &mdash; YouTube 채널 구독
               정보 연동 및 영상 데이터 조회
             </li>
+            <li>
+              <strong>Google Gemini API</strong> &mdash; AI 요약·인사이트·트렌드·Q&amp;A
+              생성을 위해 영상 자막·제목·설명, 피드 문맥, 이용자가 입력한
+              목표·질문이 전송됩니다.
+            </li>
+            <li>
+              <strong>Notion API</strong> &mdash; 이용자가 &quot;노션에 정리&quot;를
+              실행할 때 영상 분석 결과와 관련 맥락이 운영자가 지정한 Notion
+              데이터베이스로 전송됩니다.
+            </li>
           </ul>
         </section>
 
@@ -67,9 +84,11 @@ export default function PrivacyPage() {
         <section className="mt-10">
           <h2 className="text-xl font-semibold">4. 보유 기간</h2>
           <p className="mt-3 leading-relaxed text-(--notion-fg)/80">
-            개인정보는 서비스 이용 기간 동안 보유하며, 회원 탈퇴 시 지체 없이
-            파기합니다. 단, 관련 법령에 따라 일정 기간 보관이 필요한 경우 해당
-            기간 동안 보관합니다.
+            개인정보는 서비스 이용 기간 동안 보유합니다. 이용자 브라우저에 저장된
+            데이터(목표·요약·시청 기록 등)는 이용자가 브라우저 저장소를 비우면
+            즉시 삭제됩니다. 서버에 보관된 데이터의 삭제·탈퇴는 현재 문의처를 통해
+            요청할 수 있으며, 요청 시 지체 없이 파기합니다. 단, 관련 법령에 따라
+            일정 기간 보관이 필요한 경우 해당 기간 동안 보관합니다.
           </p>
         </section>
 
@@ -77,12 +96,14 @@ export default function PrivacyPage() {
         <section className="mt-10">
           <h2 className="text-xl font-semibold">5. 이용자의 권리</h2>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-(--notion-fg)/80">
-            <li>개인정보 열람, 수정, 삭제 요청</li>
+            <li>개인정보 열람·수정·삭제 요청</li>
             <li>개인정보 처리 정지 요청</li>
-            <li>회원 탈퇴를 통한 개인정보 삭제</li>
+            <li>데이터 내보내기 (내 계정 페이지에서 직접 가능)</li>
+            <li>계정 탈퇴 및 개인정보 삭제 요청</li>
           </ul>
           <p className="mt-3 leading-relaxed text-(--notion-fg)/80">
-            위 권리는 서비스 내 설정 또는 아래 문의처를 통해 행사할 수 있습니다.
+            데이터 내보내기는 내 계정 페이지에서 직접 할 수 있으며, 삭제·탈퇴·처리
+            정지는 아래 문의처를 통해 요청할 수 있습니다.
           </p>
         </section>
 

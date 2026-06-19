@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import {
   getNotionEnv,
   findResourceByUrl,
@@ -12,6 +13,8 @@ import {
   type BriefingHint,
 } from "@/lib/notion-section-analyzer";
 import { buildResourceBody, buildSummaryBody } from "@/lib/notion-content";
+import { getPlanForUser } from "@/lib/plan";
+import { takeToken } from "@/lib/rate-limit";
 
 export type NotionSyncResult =
   | { ok: true; resourceUrl: string; summaryUrl: string; reused?: boolean }
@@ -34,6 +37,22 @@ export async function syncVideoToNotionAction(args: {
   const { videoId, title, channel, durationMinutes, hint } = args;
   if (!videoId || !title) {
     return { error: "videoId와 title이 필요합니다." };
+  }
+
+  // 권한: 공유 Notion 토큰은 운영자(owner) 전용이다. 사용자별 Notion OAuth가
+  // 도입되기 전까지 비owner·비로그인 호출은 거절해 운영자 DB 오염·비용을 막는다.
+  const cookieStore = await cookies();
+  const plan = await getPlanForUser(cookieStore);
+  if (plan !== "owner") {
+    return { error: "노션 정리는 운영자 계정에서만 사용할 수 있습니다." };
+  }
+
+  // 레이트리밋: 자동/연타 호출로 Gemini·Notion 비용이 폭주하지 않게 막는다.
+  const rl = takeToken("notion-sync", 10, 60_000);
+  if (!rl.ok) {
+    return {
+      error: `요청이 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.`,
+    };
   }
 
   // AI 섹션 분석에 필수 — 노션 조회·자막 추출 전에 빠르게 실패시킨다.
