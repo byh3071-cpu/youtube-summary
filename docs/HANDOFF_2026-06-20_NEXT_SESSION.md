@@ -54,6 +54,7 @@ tags: [focus-feed, handoff, security, content-state, ux, next-session, adversari
 4. **[P1] 인박스 ② RSS 연결** — `FeedItem.tsx`에 ContentStateControl 추가(`contentIdForItem`로 `rss:link`). FeedList의 RSS 섹션에서 상태 전달.
 5. **[P2] 스펙 Phase 2** — 재생 위치 **서버 저장**(현재 localStorage, `content_states.play_position_seconds` 활용), 타임스탬프 메모.
 6. **[P2] 제품 차별화** — UX-50(Today Queue/피드 DJ), UX-51(왜 중요한가 배지), UX-52(저장 후 정리 흐름) — 별도 제품 스프린트.
+7. **[P2] 문서 정합** — `docs/PRD.md` §9 백로그에 M8 구현 범위(보안·콘텐츠 상태 모델·데이터 내보내기·UX P0)를 반영한다. 현재는 `MILESTONES.md` M8에만 기록돼 있다(UX-62 후속).
 
 근거 문서: 제품 방향 `docs/PERSONAL_CONTENT_RESEARCH_SYSTEM_SPEC.md`, UX 분해 `docs/UX_IMPROVEMENT_HANDOFF_2026-06-20.md`, 보안 잔여 `docs/CLAUDE_CODE_FULL_STACK_REMEDIATION_HANDOFF.md`.
 
