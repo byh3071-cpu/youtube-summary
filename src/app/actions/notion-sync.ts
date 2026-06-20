@@ -18,6 +18,10 @@ import {
   type BriefingHint,
 } from "@/lib/notion-section-analyzer";
 import { buildResourceBody, buildSummaryBody } from "@/lib/notion-content";
+import {
+  getContentStatesAction,
+  setContentStateAction,
+} from "@/app/actions/content-state";
 import { getPlanForUser } from "@/lib/plan";
 import { takeToken } from "@/lib/rate-limit";
 
@@ -38,8 +42,11 @@ export async function syncVideoToNotionAction(args: {
   channel?: string | null;
   durationMinutes?: number | null;
   hint?: BriefingHint;
+  contentId?: string;
+  requireReviewed?: boolean;
 }): Promise<NotionSyncResult> {
-  const { videoId, title, channel, durationMinutes, hint } = args;
+  const { videoId, title, channel, durationMinutes, hint, contentId, requireReviewed } =
+    args;
   if (!videoId || !title) {
     return { error: "videoId와 title이 필요합니다." };
   }
@@ -50,6 +57,17 @@ export async function syncVideoToNotionAction(args: {
   const plan = await getPlanForUser(cookieStore);
   if (plan !== "owner") {
     return { error: "노션 정리는 운영자 계정에서만 사용할 수 있습니다." };
+  }
+
+  // ③ reviewed 게이트: contentId + requireReviewed면, 콘텐츠가 'reviewed'일 때만 승급 허용
+  //   (스펙 §14.1 — 검토 통과분만 요한 브레인으로). 끄면(기본) 기존 수동 동기화 그대로.
+  if (requireReviewed && contentId) {
+    const states = await getContentStatesAction([contentId]);
+    if (states[contentId]?.state !== "reviewed") {
+      return {
+        error: "검토 완료('reviewed') 상태에서만 요한 브레인으로 보낼 수 있습니다.",
+      };
+    }
   }
 
   // 레이트리밋: 자동/연타 호출로 Gemini·Notion 비용이 폭주하지 않게 막는다.
@@ -251,6 +269,20 @@ export async function syncVideoToNotionAction(args: {
         } catch (e) {
           console.error("[NotionSync] concept upsert failed", e);
         }
+      }
+    }
+
+    // ③ 사후: 콘텐츠 상태를 exported로 전이 + notion_page_id 저장 (best-effort).
+    //   canTransition상 'reviewed'에서만 성공 — 검토 안 된 콘텐츠는 조용히 스킵된다.
+    if (contentId) {
+      try {
+        await setContentStateAction({
+          contentId,
+          nextState: "exported",
+          notionPageId: summaryPage.id,
+        });
+      } catch (e) {
+        console.error("[NotionSync] content-state exported 전이 실패", e);
       }
     }
 

@@ -136,6 +136,7 @@ export default function MyFocusSection() {
       try {
         const result = await syncVideoToNotionAction({
           videoId,
+          contentId: videoId,
           title: entry.item.title,
           channel: entry.item.sourceName ?? null,
           durationMinutes:

@@ -85,6 +85,7 @@ export async function setContentStateAction(input: {
   nextState: ContentState;
   sourceId?: string | null;
   sourceType?: ContentSourceType | null;
+  notionPageId?: string | null;
 }): Promise<SetContentStateResult> {
   const contentId = input.contentId?.trim();
   if (!contentId || contentId.length > 512) {
@@ -128,6 +129,9 @@ export async function setContentStateAction(input: {
     updated_at: now,
     ...(input.sourceId !== undefined ? { source_id: input.sourceId } : {}),
     ...(input.sourceType !== undefined ? { source_type: input.sourceType } : {}),
+    ...(input.notionPageId !== undefined
+      ? { notion_page_id: input.notionPageId }
+      : {}),
   };
 
   const table = supabase.from("content_states");
