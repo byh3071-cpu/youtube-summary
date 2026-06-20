@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { Menu } from "lucide-react";
 import { LoginButton } from "@/components/auth/LoginButton";
 import MobileNavDrawer from "./MobileNavDrawer";
 import type { MergedFeedResult } from "@/lib/feed";
@@ -27,14 +28,16 @@ export default function MobileHeaderWithNav({
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="relative flex h-11 shrink-0 items-center justify-center rounded-lg text-(--notion-fg)/70 hover:bg-(--notion-hover) hover:text-(--notion-fg) w-[150px]"
+            className="relative flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-(--notion-border) pl-1.5 pr-2.5 text-(--notion-fg)/70 hover:bg-(--notion-hover) hover:text-(--notion-fg)"
             aria-label="메뉴 열기"
           >
+            {/* 햄버거 아이콘으로 '메뉴'임을 명확히 한다(UX-32). 로고는 브랜드용으로 유지. */}
+            <Menu size={20} className="shrink-0" aria-hidden />
             <Image
               src="/rogo.png"
               alt="Focus Feed"
-              width={150}
-              height={44}
+              width={124}
+              height={38}
               className="object-contain object-left"
               priority
             />
