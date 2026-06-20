@@ -198,22 +198,13 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentS
       </a>
       {item.id && (
         <div className="flex shrink-0 items-center justify-end gap-1 px-0 pb-1 pt-0.5">
-          <div className="mr-auto flex items-center gap-1">
+          <div className="mr-auto">
             <DeepDiveButton
               videoId={item.id}
               title={item.title}
               channel={item.sourceName}
               durationSeconds={item.durationSeconds ?? null}
             />
-            {onContentStateChange && (
-              <ContentStateControl
-                contentId={item.id}
-                sourceId={item.sourceId}
-                sourceType="YouTube"
-                state={contentState?.state}
-                onChange={onContentStateChange}
-              />
-            )}
           </div>
           {onBookmarkChange && (
             <BookmarkButton
@@ -242,12 +233,28 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentS
         >
           <SummarizeButton videoId={item.id} />
           {menuOpen && (
-            <div className="mt-1.5 rounded-xl border border-(--notion-border) bg-(--notion-bg) px-2.5 py-2 text-xs text-(--notion-fg) shadow-sm">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-(--notion-fg)/55 sm:text-xs">
-                AI 도구
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <InsightButton videoId={item.id} completed={completed} />
+            <div className="mt-1.5 space-y-2.5 rounded-xl border border-(--notion-border) bg-(--notion-bg) px-2.5 py-2 text-xs text-(--notion-fg) shadow-sm">
+              {onContentStateChange && (
+                <div>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-(--notion-fg)/55 sm:text-xs">
+                    처리 상태
+                  </p>
+                  <ContentStateControl
+                    contentId={item.id}
+                    sourceId={item.sourceId}
+                    sourceType="YouTube"
+                    state={contentState?.state}
+                    onChange={onContentStateChange}
+                  />
+                </div>
+              )}
+              <div>
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-(--notion-fg)/55 sm:text-xs">
+                  AI 도구
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <InsightButton videoId={item.id} completed={completed} />
+                </div>
               </div>
             </div>
           )}

@@ -517,10 +517,10 @@ export function DeepDiveButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-full border border-(--notion-border) px-2.5 py-1 text-[11px] font-semibold text-(--notion-fg)/75 transition-colors hover:bg-(--notion-hover) hover:text-(--notion-fg)"
+        className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-(--notion-border) px-2.5 py-1 text-[11px] font-semibold text-(--notion-fg)/75 transition-colors hover:bg-(--notion-hover) hover:text-(--notion-fg)"
         title="영상 전체 분석 — 인사이트·인용·키워드 추출"
       >
-        <BookOpen size={12} /> 딥다이브
+        <BookOpen size={12} /> <span className="hidden sm:inline">딥다이브</span>
       </button>
       {open && (
         <VideoDigestDrawer

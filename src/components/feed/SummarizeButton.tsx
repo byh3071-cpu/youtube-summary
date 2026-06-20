@@ -66,7 +66,7 @@ export default function SummarizeButton({ videoId }: Props) {
     <div className="mt-2.5 text-sm">
       <button
         onClick={handleToggle}
-        className="inline-flex items-center gap-1.5 rounded-full border border-(--notion-border) bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-500/20 focus-visible:outline-none focus:ring-2 focus:ring-purple-500/40 dark:border-purple-400/50 dark:bg-purple-500/15 dark:text-purple-100 hover:dark:bg-purple-500/25"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-(--notion-border) bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-500/20 focus-visible:outline-none focus:ring-2 focus:ring-purple-500/40 dark:border-purple-400/50 dark:bg-purple-500/15 dark:text-purple-100 hover:dark:bg-purple-500/25"
       >
         <ThemeIcon name="AI_summary" alt="AI 요약" size={24} className={loading && !isOpen ? "animate-pulse opacity-90" : ""} />
         {summary ? "AI 핵심 3줄 요약 보기" : "AI 3줄 요약 요청하기"}
