@@ -16,6 +16,7 @@ import UsageBadge from "./UsageBadge";
 import FeedQADrawer from "./FeedQADrawer";
 import { TrendFilterProvider, useTrendFilter } from "@/contexts/TrendFilterContext";
 import { FEED_CATEGORIES } from "@/lib/sources";
+import { getContentStatesAction, type ContentStateInfo } from "@/app/actions/content-state";
 
 export type BookmarkEntry = {
   id: string;
@@ -72,6 +73,7 @@ function FeedClientContainerContent({
     const [selectedCategory, setSelectedCategory] = useState<FeedCategory | null>(initialCategory);
     const [searchQuery, setSearchQuery] = useState("");
     const [bookmarks, setBookmarks] = useState<BookmarkEntry[]>([]);
+    const [contentStates, setContentStates] = useState<Record<string, ContentStateInfo>>({});
 
     const fetchBookmarks = useCallback(async () => {
         try {
@@ -85,6 +87,15 @@ function FeedClientContainerContent({
         }
     }, []);
 
+    const fetchContentStates = useCallback(async () => {
+        try {
+            const map = await getContentStatesAction();
+            setContentStates(map);
+        } catch {
+            // 상태 로드 실패 시 조용히 무시 (비로그인·미설정 등)
+        }
+    }, []);
+
     useEffect(() => {
         setSelectedCategory(initialCategory);
     }, [initialCategory]);
@@ -92,6 +103,10 @@ function FeedClientContainerContent({
     useEffect(() => {
         fetchBookmarks();
     }, [fetchBookmarks]);
+
+    useEffect(() => {
+        fetchContentStates();
+    }, [fetchContentStates]);
 
     const handleCategoryChange = (category: FeedCategory | null) => {
         setSelectedCategory(category);
@@ -163,6 +178,8 @@ function FeedClientContainerContent({
                 viewMode={view}
                 bookmarks={bookmarks}
                 onBookmarkChange={fetchBookmarks}
+                contentStates={contentStates}
+                onContentStateChange={fetchContentStates}
                 totalCount={selectedSourceName ? filteredItems.length : undefined}
             />
             <FeedQADrawer selectedSourceId={selectedSourceId} />

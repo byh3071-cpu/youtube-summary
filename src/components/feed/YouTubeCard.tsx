@@ -6,10 +6,12 @@ import { CheckCircle2, RotateCcw, MoreHorizontal } from "lucide-react";
 import { FeedItem as FeedItemType } from "@/types/feed";
 import AddToRadioButton from "./AddToRadioButton";
 import BookmarkButton from "./BookmarkButton";
+import ContentStateControl from "./ContentStateControl";
 import SummarizeButton from "./SummarizeButton";
 import InsightButton from "./InsightButton";
 import { DeepDiveButton } from "./VideoDigestDrawer";
 import type { BookmarkEntry } from "./FeedClientContainer";
+import type { ContentStateInfo } from "@/app/actions/content-state";
 import { getWatchProgress } from "@/lib/watch-history";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
@@ -35,6 +37,8 @@ interface Props {
   item: FeedItemType;
   bookmark?: BookmarkEntry | null;
   onBookmarkChange?: () => void;
+  contentState?: ContentStateInfo;
+  onContentStateChange?: () => void;
 }
 
 function formatSeconds(sec: number): string {
@@ -48,7 +52,7 @@ function formatSeconds(sec: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-export default function YouTubeCard({ item, bookmark, onBookmarkChange }: Props) {
+export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentState, onContentStateChange }: Props) {
   const radio = useRadioQueueOptional();
   const [menuOpen, setMenuOpen] = useState(false);
   const isHydrated = useIsHydrated();
@@ -194,13 +198,22 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange }: Props)
       </a>
       {item.id && (
         <div className="flex shrink-0 items-center justify-end gap-1 px-0 pb-1 pt-0.5">
-          <div className="mr-auto">
+          <div className="mr-auto flex items-center gap-1">
             <DeepDiveButton
               videoId={item.id}
               title={item.title}
               channel={item.sourceName}
               durationSeconds={item.durationSeconds ?? null}
             />
+            {onContentStateChange && (
+              <ContentStateControl
+                contentId={item.id}
+                sourceId={item.sourceId}
+                sourceType="YouTube"
+                state={contentState?.state}
+                onChange={onContentStateChange}
+              />
+            )}
           </div>
           {onBookmarkChange && (
             <BookmarkButton

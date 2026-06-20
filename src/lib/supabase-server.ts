@@ -186,6 +186,37 @@ export type Database = {
         };
         Update: Partial<Database["public"]["Tables"]["custom_sources"]["Row"]>;
       };
+      content_states: {
+        Row: {
+          user_id: string;
+          content_id: string;
+          source_id: string | null;
+          source_type: string | null;
+          state: string;
+          play_position_seconds: number;
+          completed: boolean;
+          notion_page_id: string | null;
+          last_synced_at: string | null;
+          state_changed_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          content_id: string;
+          source_id?: string | null;
+          source_type?: string | null;
+          state?: string;
+          play_position_seconds?: number;
+          completed?: boolean;
+          notion_page_id?: string | null;
+          last_synced_at?: string | null;
+          state_changed_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["content_states"]["Row"]>;
+      };
     };
   };
 };
