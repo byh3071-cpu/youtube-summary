@@ -10,6 +10,7 @@ import {
   upsertPersonByName,
   tripleExists,
   createTriple,
+  upsertConceptByName,
 } from "@/lib/notion-client";
 import { getStructuredVideoContext } from "@/lib/video-transcript";
 import {
@@ -238,6 +239,17 @@ export async function syncVideoToNotionAction(args: {
           }
         } catch (e) {
           console.error("[NotionSync] triple write failed", e);
+        }
+      }
+    }
+
+    // 개념 → AI 사전 쓰기 (NOTION_WRITE_GRAPH=1 일 때만). 상태=미학습(검증 전 후보), 이름 중복은 스킵.
+    if (graphWriteEnabled() && analysis.concepts.length > 0) {
+      for (const concept of analysis.concepts) {
+        try {
+          await upsertConceptByName(client, concept, originalUrl);
+        } catch (e) {
+          console.error("[NotionSync] concept upsert failed", e);
         }
       }
     }

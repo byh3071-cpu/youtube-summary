@@ -146,3 +146,41 @@ export async function createTriple(
       properties as unknown as Parameters<typeof client.pages.create>[0]["properties"],
   });
 }
+
+export const NOTION_AIDICT_DS_ID = "3349740a-b072-809b-8d6f-000b4b8964b3";
+
+/**
+ * 개념(용어)을 AI 사전에서 이름으로 찾고, 없으면 생성한다.
+ * 상태는 "미학습"으로 기록 — 자동 추출이라 검증 전 후보임을 DB에서 명시한다("검증된 개념만 승급" 규칙 보호).
+ * 이미 있으면 중복 생성하지 않고 재사용한다.
+ */
+export async function upsertConceptByName(
+  client: Client,
+  name: string,
+  refUrl?: string,
+): Promise<string | null> {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+
+  const res = await client.dataSources.query({
+    data_source_id: NOTION_AIDICT_DS_ID,
+    filter: { property: "이름", title: { equals: trimmed } },
+    page_size: 1,
+  });
+  const found = res.results[0];
+  if (found) return found.id;
+
+  const properties: Record<string, unknown> = {
+    이름: { title: [{ type: "text", text: { content: trimmed } }] },
+    상태: { status: { name: "미학습" } },
+  };
+  if (refUrl) {
+    properties["참고 링크"] = { url: refUrl };
+  }
+  const page = await client.pages.create({
+    parent: { data_source_id: NOTION_AIDICT_DS_ID },
+    properties:
+      properties as unknown as Parameters<typeof client.pages.create>[0]["properties"],
+  });
+  return page.id;
+}
