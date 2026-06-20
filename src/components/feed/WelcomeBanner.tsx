@@ -38,7 +38,7 @@ export default function WelcomeBanner() {
         YouTube와 RSS를 한 곳에서 모아보고, AI가 핵심만 정리해 드립니다.
       </p>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="mt-3 hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3">
         <div className="flex items-start gap-2 rounded-xl bg-(--notion-bg)/80 px-3 py-2.5">
           <Sparkles size={16} className="mt-0.5 shrink-0 text-purple-500" />
           <div>
