@@ -7,8 +7,8 @@ import { useIsHydrated } from "@/lib/use-is-hydrated";
 /** /images/icons/ 내 라이트·다크 버전이 있는 아이콘. 파일명 그대로 사용 (다크는 _dark 또는 __dark) */
 const ICON_PATHS: Record<string, { light: string; dark: string }> = {
   Play_the_radio: { light: "/images/icons/Play_the_radio.png", dark: "/images/icons/Play_the_radio_dark.png" },
-  Feed_List: { light: "/images/icons/Feed_List.png", dark: "/images/icons/Feed_List_dark.png" },
-  AI_summary: { light: "/images/icons/AI_summary.png", dark: "/images/icons/AI_summary__dark.png" },
+  Feed_List: { light: "/images/icons/Feed_List1.png", dark: "/images/icons/Feed_List_dark.png" },
+  AI_summary: { light: "/images/icons/AI_summary1.png", dark: "/images/icons/AI_summary__dark.png" },
   Connect_Sync: { light: "/images/icons/Connect_Sync.png", dark: "/images/icons/Connect_Sync_dark.png" },
 };
 

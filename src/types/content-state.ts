@@ -7,6 +7,8 @@
  * 별도 종료 상태: dismissed(볼 가치 없음), failed(수집·분석·내보내기 실패)
  */
 
+import type { FeedItem } from "./feed";
+
 export const CONTENT_STATES = [
   "inbox",
   "queued",
@@ -89,3 +91,15 @@ export type ContentStateRow = {
   created_at: string;
   updated_at: string;
 };
+
+/**
+ * 피드 항목의 안정적인 content_id를 만든다.
+ * YouTube=videoId, RSS=`rss:<link>`. content_states 의 키로 사용한다.
+ */
+export function contentIdForItem(
+  item: Pick<FeedItem, "source" | "id" | "link">,
+): string | undefined {
+  if (item.source === "YouTube") return item.id || undefined;
+  if (item.source === "RSS") return item.link ? `rss:${item.link}` : undefined;
+  return undefined;
+}
