@@ -42,6 +42,42 @@ export const SUMMARY_TAGS = [
 export type ResourceCategory = (typeof RESOURCE_CATEGORIES)[number];
 export type SummaryTag = (typeof SUMMARY_TAGS)[number];
 
+/** 트리플맵 표준 관계 팔레트 (yohan-brain knowledge-hub/triple-map.md 와 동일) */
+export const TRIPLE_RELATIONS = [
+  "is_a", "part_of", "related_to", "complementary_to", "implements",
+  "created_by", "applies_to", "depends_on", "evolved_from", "comprises",
+  "solves", "addresses", "exposes", "signals", "enables", "blocks",
+  "triggers", "transforms_into", "precondition_of", "opposite_of",
+] as const;
+
+/** 트리플 도메인 (triple-map.md 와 동일) */
+export const TRIPLE_DOMAINS = [
+  "AI/자동화",
+  "비즈니스",
+  "개발",
+  "자기이해",
+  "학습",
+] as const;
+
+export type TripleRelation = (typeof TRIPLE_RELATIONS)[number];
+export type TripleDomain = (typeof TRIPLE_DOMAINS)[number];
+
+/** [주어] --관계--> [목적어] 의미 관계 1건 (요한 브레인 승급 후보) */
+export interface Triple {
+  subject: string;
+  relation: TripleRelation;
+  object: string;
+  domain: TripleDomain;
+  /** 신뢰도 1~5 (자막 기반=3, 추론=2) */
+  confidence: number;
+}
+
+/** 영상에 등장한 인물 (인물 DB 승급 후보) */
+export interface PersonMention {
+  name: string;
+  role?: string;
+}
+
 export interface SectionAnalysis {
   timestamp: string | null;
   title: string;
@@ -56,6 +92,12 @@ export interface VideoAnalysis {
   summary: string;
   sections: SectionAnalysis[];
   openQuestions: string[];
+  /** 트리플맵 후보 (R3: 후보만 — 등록·확정은 검토 후) */
+  triples: Triple[];
+  /** 인물 DB 후보 */
+  people: PersonMention[];
+  /** AI 사전 개념 후보 */
+  concepts: string[];
 }
 
 export interface BriefingHint {
@@ -118,6 +160,8 @@ function buildPrompt(args: {
 
   const allowedCategories = JSON.stringify(RESOURCE_CATEGORIES);
   const allowedTags = JSON.stringify(SUMMARY_TAGS);
+  const allowedRelations = JSON.stringify(TRIPLE_RELATIONS);
+  const allowedDomains = JSON.stringify(TRIPLE_DOMAINS);
 
   return [
     "당신은 한국어로 학습 노트를 작성하는 분석가입니다.",
@@ -144,12 +188,25 @@ function buildPrompt(args: {
     '      "excerpt": "이 섹션에서 가장 핵심적인 자막 1~2문장 발췌"',
     "    }",
     "  ],",
-    '  "openQuestions": ["추가로 알아보면 좋을 후속 질문 1", "질문 2"]',
+    '  "openQuestions": ["추가로 알아보면 좋을 후속 질문 1", "질문 2"],',
+    '  "triples": [',
+    "    {",
+    '      "subject": "주어(개념/인물/도구/조직)",',
+    `      "relation": "관계 코드 (반드시 ${allowedRelations} 중 하나)",`,
+    '      "object": "목적어",',
+    `      "domain": "${allowedDomains} 중 하나",`,
+    '      "confidence": 3',
+    "    }",
+    "  ],",
+    '  "people": [{ "name": "인물명", "role": "역할/직함 (선택)" }],',
+    '  "concepts": ["핵심 개념/용어 1", "개념 2"]',
     "}",
     "",
     `섹션 분할 가이드: ${sectionGuide}`,
     "category/tags는 반드시 위 허용 목록에서만 선택합니다. 목록에 없는 단어를 만들지 마세요.",
     "openQuestions는 1~3개. 영상에서 다루지 않았지만 사용자 맥락(추천 이유/액션)을 고려할 때 다음에 탐구하면 좋을 질문.",
+    `triples는 3~7개. relation은 반드시 ${allowedRelations} 에서만 고르고, 불확실하면 related_to. 특히 solves/addresses/exposes(문제 지도)를 우선 활용. confidence는 자막 기반이면 3, 추론이면 2.`,
+    "people는 영상의 저자·발화자·핵심 등장인물 0~5명 (1회성 인용 제외). concepts는 재사용 가치가 있는 핵심 용어 3~8개.",
   ]
     .filter((line) => line !== null && line !== undefined)
     .join("\n");
@@ -199,6 +256,65 @@ function safeParseAnalysis(raw: string): VideoAnalysis | null {
           .slice(0, 3)
       : [];
 
+    const triples: Triple[] = Array.isArray(parsed.triples)
+      ? parsed.triples
+          .map((t): Triple | null => {
+            if (!t || typeof t !== "object") return null;
+            const obj = t as Partial<Triple>;
+            if (
+              typeof obj.subject !== "string" ||
+              typeof obj.object !== "string" ||
+              typeof obj.relation !== "string" ||
+              !(TRIPLE_RELATIONS as readonly string[]).includes(obj.relation)
+            ) {
+              return null;
+            }
+            const domain =
+              typeof obj.domain === "string" &&
+              (TRIPLE_DOMAINS as readonly string[]).includes(obj.domain)
+                ? (obj.domain as TripleDomain)
+                : "AI/자동화";
+            const confidence =
+              typeof obj.confidence === "number" &&
+              obj.confidence >= 1 &&
+              obj.confidence <= 5
+                ? Math.round(obj.confidence)
+                : 3;
+            return {
+              subject: obj.subject,
+              relation: obj.relation as TripleRelation,
+              object: obj.object,
+              domain,
+              confidence,
+            };
+          })
+          .filter((t): t is Triple => t !== null)
+          .slice(0, 7)
+      : [];
+
+    const people: PersonMention[] = Array.isArray(parsed.people)
+      ? parsed.people
+          .map((p): PersonMention | null => {
+            if (!p || typeof p !== "object") return null;
+            const obj = p as Partial<PersonMention>;
+            if (typeof obj.name !== "string" || obj.name.trim() === "") {
+              return null;
+            }
+            return typeof obj.role === "string" && obj.role.trim() !== ""
+              ? { name: obj.name.trim(), role: obj.role.trim() }
+              : { name: obj.name.trim() };
+          })
+          .filter((p): p is PersonMention => p !== null)
+          .slice(0, 5)
+      : [];
+
+    const concepts: string[] = Array.isArray(parsed.concepts)
+      ? parsed.concepts
+          .filter((c): c is string => typeof c === "string" && c.trim() !== "")
+          .map((c) => c.trim())
+          .slice(0, 8)
+      : [];
+
     return {
       headline: parsed.headline,
       category,
@@ -208,6 +324,9 @@ function safeParseAnalysis(raw: string): VideoAnalysis | null {
         { timestamp: null, title: "전체", points: [], excerpt: "" },
       ],
       openQuestions,
+      triples,
+      people,
+      concepts,
     };
   } catch {
     return null;

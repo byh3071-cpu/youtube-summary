@@ -49,5 +49,9 @@ export function digestToVideoAnalysis(digest: VideoDigest): VideoAnalysis {
         ? sections
         : [{ timestamp: null, title: "전체", points: [], excerpt: "" }],
     openQuestions: digest.openQuestions,
+    // 디제스트 경로는 아직 트리플/인물/개념을 추출하지 않음 — 빈 배열 (후속 조각)
+    triples: [],
+    people: [],
+    concepts: [],
   };
 }

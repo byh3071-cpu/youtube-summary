@@ -6,6 +6,10 @@ import {
   findResourceByUrl,
   NOTION_RESOURCE_DS_ID,
   NOTION_SUMMARY_DS_ID,
+  graphWriteEnabled,
+  upsertPersonByName,
+  tripleExists,
+  createTriple,
 } from "@/lib/notion-client";
 import { getStructuredVideoContext } from "@/lib/video-transcript";
 import {
@@ -110,6 +114,19 @@ export async function syncVideoToNotionAction(args: {
     };
   }
 
+  // 인물 그래프 쓰기 (NOTION_WRITE_GRAPH=1 일 때만). 이름 일치 재사용, 없으면 생성.
+  const personIds: string[] = [];
+  if (graphWriteEnabled() && analysis.people.length > 0) {
+    for (const person of analysis.people) {
+      try {
+        const id = await upsertPersonByName(client, person.name, person.role);
+        if (id) personIds.push(id);
+      } catch (e) {
+        console.error("[NotionSync] person upsert failed", e);
+      }
+    }
+  }
+
   let resourcePageId: string;
   let resourceUrl: string;
 
@@ -144,6 +161,11 @@ export async function syncVideoToNotionAction(args: {
         multi_select: analysis.tags.map((t) => ({ name: t })),
       },
     };
+    if (personIds.length > 0) {
+      resourceProperties["관련 인물"] = {
+        relation: personIds.map((id) => ({ id })),
+      };
+    }
     if (durationMinutes != null && Number.isFinite(durationMinutes)) {
       resourceProperties["분량(분)"] = { number: Math.round(durationMinutes) };
     }
@@ -182,6 +204,11 @@ export async function syncVideoToNotionAction(args: {
     "관련 RESOURCE 1": { relation: [{ id: resourcePageId }] },
     태그: { multi_select: analysis.tags.map((t) => ({ name: t })) },
   };
+  if (personIds.length > 0) {
+    summaryProperties["관련 인물"] = {
+      relation: personIds.map((id) => ({ id })),
+    };
+  }
 
   const summaryBody = buildSummaryBody({
     analysis,
@@ -201,6 +228,20 @@ export async function syncVideoToNotionAction(args: {
       "url" in summaryPage && typeof summaryPage.url === "string"
         ? summaryPage.url
         : `https://www.notion.so/${summaryPage.id.replace(/-/g, "")}`;
+
+    // 트리플맵 쓰기 (NOTION_WRITE_GRAPH=1 일 때만). Subject+Relation 중복은 스킵.
+    if (graphWriteEnabled() && analysis.triples.length > 0) {
+      for (const triple of analysis.triples) {
+        try {
+          if (!(await tripleExists(client, triple.subject, triple.relation))) {
+            await createTriple(client, triple, summaryPage.id);
+          }
+        } catch (e) {
+          console.error("[NotionSync] triple write failed", e);
+        }
+      }
+    }
+
     return {
       ok: true,
       resourceUrl,
