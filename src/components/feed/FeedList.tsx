@@ -5,6 +5,7 @@ import YouTubeCard from "./YouTubeCard";
 import { AutoAnimateList } from "@/components/ui/AutoAnimateList";
 import { Coffee, Rss, Youtube } from "lucide-react";
 import type { BookmarkEntry } from "./FeedClientContainer";
+import type { ContentStateInfo } from "@/app/actions/content-state";
 import Image from "next/image";
 
 const YOUTUBE_PAGE_SIZE = 60;
@@ -21,6 +22,8 @@ interface Props {
     viewMode?: ViewMode;
     bookmarks?: BookmarkEntry[];
     onBookmarkChange?: () => void;
+    contentStates?: Record<string, ContentStateInfo>;
+    onContentStateChange?: () => void;
     /** 소스 선택 시 해당 소스 총 개수 (유튜브/RSS 섹션 헤더에 표시) */
     totalCount?: number;
 }
@@ -67,7 +70,7 @@ function FeedListFlat({ items }: { items: FeedItemType[] }) {
     );
 }
 
-export default function FeedList({ items, hasActiveFilters = false, selectedSourceName, useTickerLayout = true, viewMode = "all", bookmarks = [], onBookmarkChange, totalCount }: Props) {
+export default function FeedList({ items, hasActiveFilters = false, selectedSourceName, useTickerLayout = true, viewMode = "all", bookmarks = [], onBookmarkChange, contentStates = {}, onContentStateChange, totalCount }: Props) {
     const [ytLimit, setYtLimit] = useState(YOUTUBE_PAGE_SIZE);
     const [rssLimit, setRssLimit] = useState(RSS_PAGE_SIZE);
 
@@ -150,6 +153,8 @@ export default function FeedList({ items, hasActiveFilters = false, selectedSour
                                                     item={item}
                                                     bookmark={b}
                                                     onBookmarkChange={onBookmarkChange}
+                                                    contentState={item.id ? contentStates[item.id] : undefined}
+                                                    onContentStateChange={onContentStateChange}
                                                 />
                                             </li>
                                         );
