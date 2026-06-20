@@ -200,6 +200,36 @@ export function buildSummaryBody(args: {
     }
   }
 
+  if (analysis.triples.length > 0) {
+    blocks.push(divider());
+    blocks.push(heading2("트리플 맵 (관계 후보)"));
+    for (const t of analysis.triples) {
+      blocks.push(
+        bullet(
+          `${t.subject} --${t.relation}--> ${t.object}  ·${t.domain} ·신뢰도 ${t.confidence}`,
+        ),
+      );
+    }
+    blocks.push(
+      paragraph(
+        "_검토 후 triple-map.md / 트리플맵 DB로 승급. 자동 확정 아님 (R3 후보)._",
+      ),
+    );
+  }
+
+  if (analysis.people.length > 0 || analysis.concepts.length > 0) {
+    blocks.push(heading3("인물·개념 (후보)"));
+    for (const p of analysis.people) {
+      blocks.push(bullet(`👤 ${p.name}${p.role ? ` — ${p.role}` : ""}`));
+    }
+    for (const c of analysis.concepts) {
+      blocks.push(bullet(`📎 ${c}`));
+    }
+    blocks.push(
+      paragraph("_검토 후 인물 DB / AI 사전으로 승급 (R3 후보)._"),
+    );
+  }
+
   blocks.push(heading3("매핑 / 보완 (직접 작성)"));
   blocks.push(
     paragraph(
