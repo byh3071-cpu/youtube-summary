@@ -51,20 +51,22 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-function base64UrlDecode(input: string): string {
+export function base64UrlDecode(input: string): string {
   const pad = input.length % 4 === 0 ? "" : "=".repeat(4 - (input.length % 4));
   return atob(input.replace(/-/g, "+").replace(/_/g, "/") + pad);
 }
 
 /**
- * Supabase 인증 쿠키(sb-*-auth-token, 청크 .0/.1 포함)에서 세션 만료 시각(unix sec)을
- * 네트워크 호출 없이 읽는다. 어떤 단계든 실패하면 null → 호출부가 getUser로 폴백.
- * (만료 판단에만 쓰고 신뢰가 필요한 인증은 여전히 getUser/RLS가 담당)
+ * Supabase 인증 쿠키 목록(이름·값)에서 세션 만료 시각(unix sec)을 네트워크 호출 없이 읽는
+ * 순수 함수. NextRequest 의존이 없어 단위 테스트가 가능하다(런타임 경로는 getSessionExpiry 경유).
+ * 청크(.0/.1) 병합 → base64-/URL 디코딩 → expires_at, 없으면 access_token(JWT) exp 순으로 본다.
+ * 어떤 단계든 실패하면 null → 호출부가 getUser로 폴백한다.
  */
-function getSessionExpiry(request: NextRequest): number | null {
+export function parseSessionExpiryFromCookies(
+  cookies: ReadonlyArray<{ name: string; value: string }>,
+): number | null {
   try {
-    const chunks = request.cookies
-      .getAll()
+    const chunks = cookies
       .filter((c) => /^sb-.+-auth-token(\.\d+)?$/.test(c.name))
       .sort((a, b) => {
         const na = Number(a.name.match(/\.(\d+)$/)?.[1] ?? "0");
@@ -96,6 +98,15 @@ function getSessionExpiry(request: NextRequest): number | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Supabase 인증 쿠키(sb-*-auth-token, 청크 .0/.1 포함)에서 세션 만료 시각(unix sec)을
+ * 네트워크 호출 없이 읽는다. 어떤 단계든 실패하면 null → 호출부가 getUser로 폴백.
+ * (만료 판단에만 쓰고 신뢰가 필요한 인증은 여전히 getUser/RLS가 담당)
+ */
+function getSessionExpiry(request: NextRequest): number | null {
+  return parseSessionExpiryFromCookies(request.cookies.getAll());
 }
 
 export const config = {
