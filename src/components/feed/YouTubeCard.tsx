@@ -15,6 +15,7 @@ import type { ContentStateInfo } from "@/app/actions/content-state";
 import { getWatchProgress } from "@/lib/watch-history";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
+import { HIT_AREA_44, ICON_ACTION_BTN } from "@/lib/ui";
 
 function formatTimeAgo(pubDate: string): string {
   const date = new Date(pubDate);
@@ -213,14 +214,14 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentS
               isBookmarked={!!bookmark}
               bookmarkId={bookmark?.id ?? null}
               onBookmarkChange={onBookmarkChange}
-              className="h-9 w-9 relative before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']"
+              className={`h-9 w-9 ${HIT_AREA_44}`}
             />
           )}
           <AddToRadioButton videoId={item.id} title={item.title} iconOnly />
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-(--notion-fg)/60 hover:bg-(--notion-hover) hover:text-(--notion-fg) touch-manipulation before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']"
+            className={`${ICON_ACTION_BTN} text-(--notion-fg)/60 hover:text-(--notion-fg)`}
             aria-label="더보기"
             aria-expanded={menuOpen}
             aria-controls={`card-more-${item.id}`}

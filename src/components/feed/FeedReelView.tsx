@@ -47,6 +47,8 @@ function ReelSlide({
   // 라디오 플레이어(모바일 fixed bottom bar)가 떠 있으면 마지막 슬라이드 버튼바를 가린다 →
   // 하단 spacer를 키워 액션바를 플레이어 위로 밀어올린다.
   const radioActive = !!radio && radio.queue.length > 0;
+  // 좌/우 북마크 버튼 공용 (44px 터치 타깃)
+  const bookmarkBtnClass = "h-11 w-11 min-h-[44px] min-w-[44px] shrink-0";
   const isYoutube = item.source === "YouTube";
   const videoId = isYoutube && item.id ? item.id : null;
   // 폴백은 16:9 무레터박스 소스(maxresdefault). hqdefault(4:3)는 검은띠가 구워져 있어 contain 시 이중 레터박스가 생김.
@@ -184,7 +186,7 @@ function ReelSlide({
                 isBookmarked={!!bookmark}
                 bookmarkId={bookmark?.id ?? null}
                 onBookmarkChange={onBookmarkChange}
-                className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0"
+                className={bookmarkBtnClass}
                 iconSize={24}
               />
             )}
@@ -196,7 +198,7 @@ function ReelSlide({
                 isBookmarked={!!bookmark}
                 bookmarkId={bookmark?.id ?? null}
                 onBookmarkChange={onBookmarkChange}
-                className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0"
+                className={bookmarkBtnClass}
                 iconSize={24}
               />
             )}

@@ -2,6 +2,7 @@
 
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import { ThemeIcon } from "@/components/ui/ThemeIcon";
+import { ICON_ACTION_BTN } from "@/lib/ui";
 
 interface Props {
   videoId: string;
@@ -38,7 +39,7 @@ export default function AddToRadioButton({ videoId, title, className, iconOnly }
         onClick={handleClick}
         aria-label={label}
         title={label}
-        className={`relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors touch-manipulation hover:bg-(--notion-hover) before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[''] ${
+        className={`${ICON_ACTION_BTN} ${
           inQueue ? "text-(--focus-accent)" : "text-(--notion-fg)/60 hover:text-(--notion-fg)"
         }`}
       >

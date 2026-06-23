@@ -20,6 +20,7 @@ import {
 import type { VideoDigest } from "@/lib/digest/types";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import { storage } from "@/lib/storage";
+import { HIT_AREA_44, ICON_ACTION_BTN } from "@/lib/ui";
 
 type LoadedDigest = Extract<DigestActionResult, { ok: true }>;
 
@@ -223,7 +224,7 @@ export default function VideoDigestDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-(--notion-fg)/55 hover:bg-(--notion-hover) hover:text-(--notion-fg) before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']"
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-(--notion-fg)/55 hover:bg-(--notion-hover) hover:text-(--notion-fg) ${HIT_AREA_44}`}
             aria-label="딥다이브 닫기"
           >
             <X size={16} />
@@ -523,7 +524,7 @@ export function DeepDiveButton({
         onClick={() => setOpen(true)}
         className={
           compact
-            ? "relative inline-flex h-9 w-9 items-center justify-center rounded-full text-(--notion-fg)/60 transition-colors touch-manipulation hover:bg-(--notion-hover) hover:text-(--notion-fg) before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']"
+            ? `${ICON_ACTION_BTN} text-(--notion-fg)/60 hover:text-(--notion-fg)`
             : "inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-(--notion-border) px-2.5 py-1 text-[11px] font-semibold text-(--notion-fg)/75 transition-colors hover:bg-(--notion-hover) hover:text-(--notion-fg)"
         }
         title="딥다이브 — 영상 전체 분석(인사이트·인용·키워드)"

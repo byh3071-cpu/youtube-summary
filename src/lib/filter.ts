@@ -48,7 +48,9 @@ export function filterFeedByTrendKeyword(
   // 들어있지 않다 → 구절 포함만 보면 결과 0. 그래서 두 갈래로 매칭한다.
   // (a) sampleTitles: 그 트렌드의 대표 영상 제목들(실제 피드에서 뽑힘) → 제목 일치로 정확 매칭
   // (b) 토큰 부분 매칭: 키워드를 단어로 쪼개 일부만 맞아도 노출(폴백/확장)
-  const sampleNorms = samples.map(norm).filter((s) => s.length >= 4);
+  // LLM이 준 sampleTitles에 비문자열(null·숫자)이 섞이면 norm()이 throw → 렌더 크래시(PAT-001/002).
+  // 문자열만 받아 정규화하고 너무 짧은 건 제외.
+  const sampleNorms = samples.filter((s) => typeof s === "string").map(norm).filter((s) => s.length >= 4);
 
   const tokens = phrase.split(/\s+/).filter((t) => t.length >= 2);
   // 1~2 토큰: 1개만 맞아도 / 3 토큰 이상: 2개 이상(과매칭 방지). 단 sample 매칭은 항상 통과.
@@ -56,9 +58,10 @@ export function filterFeedByTrendKeyword(
 
   return items.filter((item) => {
     const titleNorm = norm(item.title);
-    // (a) 대표 제목과 양방향 부분 일치
+    // (a) 대표 제목과 부분 일치. 역방향(sample이 제목을 포함)은 제목이 짧을수록 무관한 영상까지
+    // 빨려드는 과매칭이라("AI"가 "AI 모델 활용법"의 부분문자열) 제목 길이 하한을 둔다.
     for (const s of sampleNorms) {
-      if (titleNorm.includes(s) || s.includes(titleNorm)) return true;
+      if (titleNorm.includes(s) || (titleNorm.length >= 8 && s.includes(titleNorm))) return true;
     }
     // (b) 토큰 매칭
     const target = searchTarget(item);
