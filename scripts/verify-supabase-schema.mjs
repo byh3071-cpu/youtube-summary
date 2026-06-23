@@ -23,6 +23,7 @@ loadDotEnvLocal();
 
 const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
 
 const requiredTables = [
   "user_plan",
@@ -57,6 +58,40 @@ for (const table of requiredTables) {
     console.error(`FAIL ${table}: ${error.message}`);
   } else {
     console.log(`OK   ${table}`);
+  }
+}
+
+// 팀 테이블 RLS 검증 (009_teams_rls.sql 적용 확인)
+// service_role 은 RLS 를 우회하므로 anon 키로 직접 조회를 시도한다.
+// RLS 활성 + anon SELECT 정책 없음(team_invites) 또는 멤버십 게이트(teams/team_members)
+// 이므로, 비로그인 anon 조회는 데이터가 노출되면 안 된다(0행이어야 안전).
+const rlsTeamTables = ["teams", "team_members", "team_invites"];
+
+if (isPlaceholder(anonKey)) {
+  console.warn(
+    "WARN RLS canary skipped: NEXT_PUBLIC_SUPABASE_ANON_KEY (또는 SUPABASE_ANON_KEY) 미설정.",
+  );
+  console.warn(
+    "     anon 차단 확인을 위해 anon 키를 설정하고 재실행하세요(009_teams_rls.sql).",
+  );
+} else {
+  const anonClient = createClient(url, anonKey, {
+    auth: { persistSession: false },
+  });
+
+  for (const table of rlsTeamTables) {
+    const { data, error } = await anonClient.from(table).select("*").limit(1);
+    if (error) {
+      // RLS 거부는 보통 0행으로 나타나지만, 명시적 권한 오류도 차단으로 간주한다.
+      console.log(`OK   RLS ${table}: anon 차단(${error.message})`);
+    } else if (Array.isArray(data) && data.length === 0) {
+      console.log(`OK   RLS ${table}: anon 직접 조회 0행`);
+    } else {
+      failed = true;
+      console.error(
+        `FAIL RLS ${table}: anon 키로 ${data?.length ?? "?"}행이 노출됨 — RLS/정책 미적용 의심.`,
+      );
+    }
   }
 }
 

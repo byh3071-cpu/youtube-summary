@@ -16,7 +16,7 @@ import FeedQADrawer from "./FeedQADrawer";
 import { TrendFilterProvider, useTrendFilter } from "@/contexts/TrendFilterContext";
 import { FEED_CATEGORIES } from "@/lib/sources";
 import { getContentStatesAction, type ContentStateInfo } from "@/app/actions/content-state";
-import { contentIdForItem } from "@/types/content-state";
+import { isItemVisibleUnderStateFilter } from "@/types/content-state";
 
 export type BookmarkEntry = {
   id: string;
@@ -142,13 +142,9 @@ function FeedClientContainerContent({
     }, [contentStates]);
 
     const visibleItems = useMemo(() => {
-        return filteredItems.filter((item) => {
-            const cid = contentIdForItem(item);
-            const st = cid ? contentStates[cid]?.state : undefined;
-            if (stateFilter === "queued") return st === "queued";
-            if (stateFilter === "dismissed") return st === "dismissed";
-            return st !== "dismissed";
-        });
+        return filteredItems.filter((item) =>
+            isItemVisibleUnderStateFilter(item, contentStates, stateFilter)
+        );
     }, [filteredItems, contentStates, stateFilter]);
 
     const availableCategories = FEED_CATEGORIES.filter(cat =>

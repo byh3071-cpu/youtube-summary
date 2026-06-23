@@ -6,6 +6,7 @@ import { AutoAnimateList } from "@/components/ui/AutoAnimateList";
 import { Coffee, Rss, Youtube } from "lucide-react";
 import type { BookmarkEntry } from "./FeedClientContainer";
 import type { ContentStateInfo } from "@/app/actions/content-state";
+import { contentIdForItem } from "@/types/content-state";
 import Image from "next/image";
 
 const YOUTUBE_PAGE_SIZE = 60;
@@ -197,12 +198,15 @@ export default function FeedList({ items, hasActiveFilters = false, selectedSour
                                 {visibleRssItems.map((item) => {
                                     const rssBookmarkId = "rss:" + item.link;
                                     const b = bookmarks.find((x) => x.video_id === rssBookmarkId) ?? null;
+                                    const rssContentId = contentIdForItem(item);
                                     return (
                                         <FeedItemComponent
                                             key={`${item.source}:${item.sourceId}:${item.id}`}
                                             item={item}
                                             bookmark={b}
                                             onBookmarkChange={onBookmarkChange}
+                                            contentState={rssContentId ? contentStates[rssContentId] : undefined}
+                                            onContentStateChange={onContentStateChange}
                                         />
                                     );
                                 })}

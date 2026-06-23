@@ -3,17 +3,24 @@ import Image from "next/image";
 import SummarizeButton from "./SummarizeButton";
 import AddToRadioButton from "./AddToRadioButton";
 import BookmarkButton from "./BookmarkButton";
+import ContentStateControl from "./ContentStateControl";
+import { contentIdForItem } from "@/types/content-state";
+import type { ContentStateInfo } from "@/app/actions/content-state";
 import type { BookmarkEntry } from "./FeedClientContainer";
 
 interface Props {
     item: FeedItemType;
     bookmark?: BookmarkEntry | null;
     onBookmarkChange?: () => void;
+    contentState?: ContentStateInfo;
+    onContentStateChange?: () => void;
 }
 
 const RSS_BOOKMARK_PREFIX = "rss:";
 
-export default function FeedItem({ item, bookmark, onBookmarkChange }: Props) {
+export default function FeedItem({ item, bookmark, onBookmarkChange, contentState, onContentStateChange }: Props) {
+    // RSS 항목의 content_id(=rss:<link>). content_states 키·필터(isItemVisibleUnderStateFilter)와 동일해야 한다.
+    const rssContentId = contentIdForItem(item);
     const publishedAt = new Date(item.pubDate);
     const hasValidDate = Number.isFinite(publishedAt.getTime());
     const cleanSummary = item.summary?.replace(/<[^>]*>?/gm, "").replace(/\s+/g, " ").trim();
@@ -60,22 +67,33 @@ export default function FeedItem({ item, bookmark, onBookmarkChange }: Props) {
                             {item.source}
                         </span>
                         <span className="truncate">{item.sourceName}</span>
-                        {item.source === "RSS" && onBookmarkChange && (
+                        {item.source === "RSS" && (onBookmarkChange || onContentStateChange) && (
                             <span
-                                className="ml-auto shrink-0"
+                                className="ml-auto flex shrink-0 items-center gap-1"
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
                                 }}
                             >
-                                <BookmarkButton
-                                    videoId={`${RSS_BOOKMARK_PREFIX}${item.link}`}
-                                    videoTitle={item.title}
-                                    highlight={item.summary ?? item.title}
-                                    isBookmarked={!!bookmark}
-                                    bookmarkId={bookmark?.id ?? null}
-                                    onBookmarkChange={onBookmarkChange}
-                                />
+                                {onContentStateChange && rssContentId && (
+                                    <ContentStateControl
+                                        contentId={rssContentId}
+                                        sourceId={item.sourceId}
+                                        sourceType="RSS"
+                                        state={contentState?.state}
+                                        onChange={onContentStateChange}
+                                    />
+                                )}
+                                {onBookmarkChange && (
+                                    <BookmarkButton
+                                        videoId={`${RSS_BOOKMARK_PREFIX}${item.link}`}
+                                        videoTitle={item.title}
+                                        highlight={item.summary ?? item.title}
+                                        isBookmarked={!!bookmark}
+                                        bookmarkId={bookmark?.id ?? null}
+                                        onBookmarkChange={onBookmarkChange}
+                                    />
+                                )}
                             </span>
                         )}
                     </div>

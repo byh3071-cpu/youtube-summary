@@ -95,11 +95,48 @@ export type ContentStateRow = {
 /**
  * 피드 항목의 안정적인 content_id를 만든다.
  * YouTube=videoId, RSS=`rss:<link>`. content_states 의 키로 사용한다.
+ *
+ * 키는 여기서 한 번만 정규화(trim)한다. 저장 경로(setContentStateAction)는
+ * contentId를 trim 후 저장하므로, 조회·필터가 untrimmed 원본을 키로 쓰면
+ * 저장키≠조회키가 되어 상태가 어긋난다. 일부 RSS 피드가 `<link>`에 앞뒤
+ * 공백/개행을 섞어 보내므로(rss-parser는 trim 안 함) 여기서 정규화해
+ * 저장·조회·필터 세 경로가 동일 키를 공유하게 만든다.
  */
 export function contentIdForItem(
   item: Pick<FeedItem, "source" | "id" | "link">,
 ): string | undefined {
-  if (item.source === "YouTube") return item.id || undefined;
-  if (item.source === "RSS") return item.link ? `rss:${item.link}` : undefined;
+  if (item.source === "YouTube") return item.id.trim() || undefined;
+  if (item.source === "RSS") {
+    const link = item.link.trim();
+    return link ? `rss:${link}` : undefined;
+  }
   return undefined;
+}
+
+/** 피드 상태필터 칩 값. all=전체, queued=처리 대기, dismissed=제외함. */
+export type StateFilter = "all" | "queued" | "dismissed";
+
+/**
+ * 상태필터(처리 대기/제외함/전체) 아래에서 피드 항목을 노출할지 판단한다.
+ *
+ * 핵심 규칙: 상태가 없는 항목(RSS·미선별 YouTube 등 content_states 행 미존재)은
+ * "아직 처리 안 됨 = 처리 대기"로 간주한다. 따라서:
+ *   - queued 필터: state === "queued" 이거나 상태가 아예 없는 항목을 노출.
+ *   - dismissed 필터: state === "dismissed" 인 항목만 노출.
+ *   - all 필터: dismissed 만 숨기고 나머지(상태 없음 포함) 모두 노출.
+ *
+ * (이전 구현은 상태 없는 항목을 queued 필터에서 전부 떨궈 RSS가 전멸했음 — HANDOFF §2-3.)
+ */
+export function isItemVisibleUnderStateFilter(
+  item: Pick<FeedItem, "source" | "id" | "link">,
+  contentStates: Record<string, { state: ContentState } | undefined>,
+  stateFilter: StateFilter,
+): boolean {
+  const cid = contentIdForItem(item);
+  const state = cid ? contentStates[cid]?.state : undefined;
+
+  if (stateFilter === "queued") return state === "queued" || state === undefined;
+  if (stateFilter === "dismissed") return state === "dismissed";
+  // all: 제외(dismissed)만 기본 숨김.
+  return state !== "dismissed";
 }
