@@ -95,12 +95,21 @@ export type ContentStateRow = {
 /**
  * 피드 항목의 안정적인 content_id를 만든다.
  * YouTube=videoId, RSS=`rss:<link>`. content_states 의 키로 사용한다.
+ *
+ * 키는 여기서 한 번만 정규화(trim)한다. 저장 경로(setContentStateAction)는
+ * contentId를 trim 후 저장하므로, 조회·필터가 untrimmed 원본을 키로 쓰면
+ * 저장키≠조회키가 되어 상태가 어긋난다. 일부 RSS 피드가 `<link>`에 앞뒤
+ * 공백/개행을 섞어 보내므로(rss-parser는 trim 안 함) 여기서 정규화해
+ * 저장·조회·필터 세 경로가 동일 키를 공유하게 만든다.
  */
 export function contentIdForItem(
   item: Pick<FeedItem, "source" | "id" | "link">,
 ): string | undefined {
-  if (item.source === "YouTube") return item.id || undefined;
-  if (item.source === "RSS") return item.link ? `rss:${item.link}` : undefined;
+  if (item.source === "YouTube") return item.id.trim() || undefined;
+  if (item.source === "RSS") {
+    const link = item.link.trim();
+    return link ? `rss:${link}` : undefined;
+  }
   return undefined;
 }
 

@@ -135,4 +135,17 @@ describe("contentIdForItem (키 계약)", () => {
     expect(contentIdForItem({ source: "RSS", id: "", link: "" })).toBeUndefined();
     expect(contentIdForItem({ source: "YouTube", id: "", link: "" })).toBeUndefined();
   });
+
+  it("RSS link 앞뒤 공백·개행을 정규화해 저장(trim)·조회 키를 일치시킨다", () => {
+    // 일부 RSS 피드가 <link>에 개행/공백을 섞어 보낸다. 정규화 없으면 저장키(action이 trim)와
+    // 조회/필터 키(contentIdForItem 원본)가 어긋나 상태가 반영 안 됨.
+    expect(contentIdForItem(rssItem("\n https://blog.example.com/p1 \n"))).toBe(
+      "rss:https://blog.example.com/p1",
+    );
+  });
+
+  it("공백뿐인 RSS link·공백뿐인 YouTube id는 undefined", () => {
+    expect(contentIdForItem(rssItem("   "))).toBeUndefined();
+    expect(contentIdForItem(ytItem("   "))).toBeUndefined();
+  });
 });
