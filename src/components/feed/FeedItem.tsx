@@ -63,8 +63,10 @@ export default function FeedItem({ item, bookmark, onBookmarkChange }: Props) {
                         {item.source === "RSS" && onBookmarkChange && (
                             <span
                                 className="ml-auto shrink-0"
-                                onClick={(e) => e.preventDefault()}
-                                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }}
                             >
                                 <BookmarkButton
                                     videoId={`${RSS_BOOKMARK_PREFIX}${item.link}`}

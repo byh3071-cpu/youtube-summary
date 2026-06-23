@@ -11,7 +11,6 @@ import FeedSearch from "./FeedSearch";
 import KeywordFilter, { useKeywordFilter } from "./KeywordFilter";
 import ViewSwitcher, { type ViewMode } from "./ViewSwitcher";
 import MyFocusSection from "./MyFocusSection";
-import WelcomeBanner from "./WelcomeBanner";
 import UsageBadge from "./UsageBadge";
 import FeedQADrawer from "./FeedQADrawer";
 import { TrendFilterProvider, useTrendFilter } from "@/contexts/TrendFilterContext";
@@ -121,12 +120,13 @@ function FeedClientContainerContent({
 
     const trendFilter = useTrendFilter();
     const selectedTrendKeyword = trendFilter?.selectedTrendKeyword ?? null;
+    const selectedTrendSamples = trendFilter?.selectedTrendSamples ?? [];
 
     const byView = filterByView(initialItems, view);
     const bySearch = filterFeedBySearch(byView, searchQuery);
     const byKeywords = filterFeedByKeywords(bySearch, keywords);
     const byCategory = filterFeedByCategory(byKeywords, selectedCategory);
-    const filteredItems = filterFeedByTrendKeyword(byCategory, selectedTrendKeyword);
+    const filteredItems = filterFeedByTrendKeyword(byCategory, selectedTrendKeyword, selectedTrendSamples);
     const hasActiveFilters = keywords.length > 0 || stateFilter !== "all";
 
     // 선별 반영: 제외(dismissed)는 기본으로 숨기고, 상태 필터에 따라 좁힌다.
@@ -171,15 +171,15 @@ function FeedClientContainerContent({
 
     return (
         <>
-            {isGlobalFeed && <WelcomeBanner />}
-            {isGlobalFeed && <MyFocusSection />}
-            {isGlobalFeed && <UsageBadge />}
-
+            {/* 상단 정리: 검색 → 트렌딩 키워드 → 필터만 노출. 히어로/환영 배너 제거, MY FOCUS·사용량은 피드 아래로 이동(기능 유지). */}
             {isGlobalFeed && (
                 <div style={{ marginBottom: 12, padding: "0 4px" }}>
                     <FeedSearch value={searchQuery} onChange={setSearchQuery} />
                 </div>
             )}
+
+            {/* 트렌딩 키워드(TrendRadarBar)를 검색 바로 아래로 끌어올림 */}
+            {children}
 
             <KeywordFilter
                 keywords={keywords}
@@ -217,7 +217,6 @@ function FeedClientContainerContent({
                         ))}
                     </div>
                 )}
-            {children}
             <FeedList
                 items={visibleItems}
                 hasActiveFilters={hasActiveFilters}
@@ -229,6 +228,11 @@ function FeedClientContainerContent({
                 onContentStateChange={fetchContentStates}
                 totalCount={selectedSourceName ? filteredItems.length : undefined}
             />
+
+            {/* 하단으로 이동: MY FOCUS · 사용량(상단에서 내림, 기능 유지) */}
+            {isGlobalFeed && <MyFocusSection />}
+            {isGlobalFeed && <UsageBadge />}
+
             <FeedQADrawer selectedSourceId={selectedSourceId} />
         </>
     );

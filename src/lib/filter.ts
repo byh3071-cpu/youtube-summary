@@ -33,12 +33,46 @@ export function filterFeedByKeywords(items: FeedItem[], keywords: string[]): Fee
  * 트렌드 키워드 하나로 피드를 임시 필터링합니다.
  * (요즘 뜨는 키워드 클릭 시 사용, 필터에 저장하지 않음)
  */
-export function filterFeedByTrendKeyword(items: FeedItem[], keyword: string | null): FeedItem[] {
+export function filterFeedByTrendKeyword(
+  items: FeedItem[],
+  keyword: string | null,
+  samples: string[] = [],
+): FeedItem[] {
   if (!keyword || !keyword.trim()) return items;
-  const k = keyword.toLowerCase().trim();
+  const phrase = keyword.toLowerCase().trim();
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
   const searchTarget = (item: FeedItem) =>
     `${item.title} ${item.summary || ""} ${item.sourceName}`.toLowerCase();
-  return items.filter((item) => searchTarget(item).includes(k));
+
+  // 트렌드 키워드("AI 모델 활용" 등)는 AI가 만든 추상 라벨이라 영상 제목에 구절이 통째로
+  // 들어있지 않다 → 구절 포함만 보면 결과 0. 그래서 두 갈래로 매칭한다.
+  // (a) sampleTitles: 그 트렌드의 대표 영상 제목들(실제 피드에서 뽑힘) → 제목 일치로 정확 매칭
+  // (b) 토큰 부분 매칭: 키워드를 단어로 쪼개 일부만 맞아도 노출(폴백/확장)
+  const sampleNorms = samples.map(norm).filter((s) => s.length >= 4);
+
+  const tokens = phrase.split(/\s+/).filter((t) => t.length >= 2);
+  // 1~2 토큰: 1개만 맞아도 / 3 토큰 이상: 2개 이상(과매칭 방지). 단 sample 매칭은 항상 통과.
+  const threshold = tokens.length >= 3 ? 2 : 1;
+
+  return items.filter((item) => {
+    const titleNorm = norm(item.title);
+    // (a) 대표 제목과 양방향 부분 일치
+    for (const s of sampleNorms) {
+      if (titleNorm.includes(s) || s.includes(titleNorm)) return true;
+    }
+    // (b) 토큰 매칭
+    const target = searchTarget(item);
+    if (target.includes(phrase)) return true;
+    if (tokens.length === 0) return false;
+    let hits = 0;
+    for (const tok of tokens) {
+      if (keywordMatches(tok, target)) {
+        hits += 1;
+        if (hits >= threshold) return true;
+      }
+    }
+    return false;
+  });
 }
 
 /**

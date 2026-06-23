@@ -144,7 +144,7 @@ export default function FeedList({ items, hasActiveFilters = false, selectedSour
                             <EmptyBlock message="이번 필터에 해당하는 유튜브 영상이 없습니다." />
                         ) : (
                             <>
-                                <AutoAnimateList as="ul" className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-4">
+                                <AutoAnimateList as="ul" className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                                     {visibleYoutubeItems.map((item) => {
                                         const b = item.id ? bookmarks.find((x) => x.video_id === item.id) : null;
                                         return (

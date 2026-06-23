@@ -57,11 +57,11 @@ export default function AppLayout({ children, sourceStatus, selectedSourceId, se
             <main
                 id="main"
                 tabIndex={-1}
-                className={`min-w-0 flex-1 touch-pan-y overscroll-y-contain pb-28 sm:pb-32 ${
-                    reelMode ? "px-0 pt-0" : "px-2 pt-2 sm:px-4 sm:pt-4 md:px-6 lg:px-8"
+                className={`min-w-0 flex-1 touch-pan-y overscroll-y-contain ${
+                    reelMode ? "px-0 pt-0 pb-0" : "px-2 pt-2 pb-28 sm:px-4 sm:pt-4 sm:pb-32 md:px-6 lg:px-8"
                 }`}
             >
-                <div className={reelMode ? "w-full max-w-none" : "mx-auto max-w-6xl lg:max-w-7xl"}>
+                <div className={reelMode ? "w-full max-w-none" : "mx-auto w-full max-w-6xl lg:max-w-7xl 2xl:max-w-none"}>
                     {children}
                 </div>
             </main>

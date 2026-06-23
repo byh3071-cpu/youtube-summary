@@ -7,6 +7,7 @@ import type { FeedItem } from "@/types/feed";
 import AddToRadioButton from "./AddToRadioButton";
 import BookmarkButton from "./BookmarkButton";
 import ReelContextBar from "./ReelContextBar";
+import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import type { BookmarkEntry } from "./FeedClientContainer";
 
 const RSS_BOOKMARK_PREFIX = "rss:";
@@ -42,9 +43,14 @@ function ReelSlide({
   scrollRoot: React.RefObject<HTMLDivElement | null>;
   ytReady: boolean;
 }) {
+  const radio = useRadioQueueOptional();
+  // 라디오 플레이어(모바일 fixed bottom bar)가 떠 있으면 마지막 슬라이드 버튼바를 가린다 →
+  // 하단 spacer를 키워 액션바를 플레이어 위로 밀어올린다.
+  const radioActive = !!radio && radio.queue.length > 0;
   const isYoutube = item.source === "YouTube";
   const videoId = isYoutube && item.id ? item.id : null;
-  const thumbUrl = item.thumbnail ?? (videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : "");
+  // 폴백은 16:9 무레터박스 소스(maxresdefault). hqdefault(4:3)는 검은띠가 구워져 있어 contain 시 이중 레터박스가 생김.
+  const thumbUrl = item.thumbnail ?? (videoId ? `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg` : "");
   const sectionRef = useRef<HTMLElement>(null);
   const playerRef = useRef<{ destroy: () => void; pauseVideo?: () => void } | null>(null);
   const [inView, setInView] = useState(false);
@@ -154,7 +160,7 @@ function ReelSlide({
             {item.sourceName}
           </span>
         </div>
-        <div className="grid shrink-0 grid-cols-3 items-center gap-4 bg-(--notion-bg) px-4 py-3.5 min-h-[1rem]">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-(--notion-bg) px-4 py-3.5 min-h-[3.5rem] sm:grid sm:grid-cols-3 sm:gap-4">
           <a
             href={item.link}
             target="_blank"
@@ -178,7 +184,7 @@ function ReelSlide({
                 isBookmarked={!!bookmark}
                 bookmarkId={bookmark?.id ?? null}
                 onBookmarkChange={onBookmarkChange}
-                className="h-9 w-9 shrink-0"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0"
                 iconSize={24}
               />
             )}
@@ -190,17 +196,17 @@ function ReelSlide({
                 isBookmarked={!!bookmark}
                 bookmarkId={bookmark?.id ?? null}
                 onBookmarkChange={onBookmarkChange}
-                className="h-9 w-9 shrink-0"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0"
                 iconSize={24}
               />
             )}
           </div>
         </div>
-        {/* 버튼 바 아래 여백: 높이 그대로, 색만 배경색으로 */}
-        <div className="shrink-0 min-h-[5rem] bg-(--notion-bg)" aria-hidden />
+        {/* 버튼 바 아래 여백. 라디오 플레이어 떠 있으면 그 높이만큼 더 확보해 버튼바가 안 가리게 */}
+        <div className={`shrink-0 bg-(--notion-bg) ${radioActive ? "min-h-[9rem]" : "min-h-[5rem]"}`} aria-hidden />
       </div>
       {index < total - 1 && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/60">
+        <div className={`absolute left-1/2 -translate-x-1/2 text-white/60 ${radioActive ? "bottom-32" : "bottom-20"}`}>
           <ChevronDown size={28} className="animate-bounce" aria-hidden />
         </div>
       )}

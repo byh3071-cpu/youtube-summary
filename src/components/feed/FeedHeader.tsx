@@ -1,12 +1,9 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
-import { useTheme } from "next-themes";
 import RefreshButton from "@/components/ui/RefreshButton";
 import ConnectionStatusPopup from "@/components/feed/ConnectionStatusPopup";
 import type { YouTubeFetchStatus } from "@/lib/youtube";
-import { useIsHydrated } from "@/lib/use-is-hydrated";
 
 interface FeedHeaderProps {
   selectedSource?: { id: string; name: string; type: "YouTube" | "RSS" };
@@ -33,64 +30,26 @@ export default function FeedHeader({
   sourceStatus,
 }: FeedHeaderProps) {
   const showYoutubeNotice = sourceStatus.youtube !== "ready" && (!selectedSource || selectedSource.type === "YouTube");
-  const isHydrated = useIsHydrated();
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-  const heroSrc = !isHydrated
-    ? "/images/hero/hero-illustration3.png"
-    : isDark
-      ? "/images/hero/hero-illustration_dark4.png"
-      : "/images/hero/hero-illustration3.png";
 
   return (
     <section
       className={
         selectedSource
           ? "mb-0 border-0 rounded-none bg-white dark:bg-(--notion-bg) px-4 py-4 sm:px-6 sm:py-5"
-          : "mb-4 rounded-3xl border border-(--notion-border) bg-linear-to-b from-(--notion-bg) to-(--notion-gray) p-5 sm:mb-5 sm:p-7"
+          : "mb-3 px-1"
       }
     >
-      <div className={`flex ${selectedSource ? "flex-row items-center justify-between gap-4" : "flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"}`}>
+      <div className="flex flex-row items-center justify-between gap-3">
         <div className="min-w-0">
           {selectedSource ? (
             <h1 className="mb-0 text-xl font-bold tracking-tight sm:text-2xl">
               <span className="truncate">{selectedSource.name}</span>
             </h1>
           ) : (
-            <>
-              <div className="mb-3 mt-3 -ml-4">
-                <div className="relative h-9 w-[180px] sm:h-11 sm:w-[220px]">
-                  <Image
-                    src="/focus-feed-wordmark-v5.png"
-                    alt="Focus Feed 로고"
-                    fill
-                    sizes="220px"
-                    className="object-contain"
-                    priority
-                  />
-                </div>
-              </div>
-              <div className="mt-2 hidden sm:block">
-                <div className="relative h-32 w-full max-w-[420px]">
-                  <Image
-                    src={heroSrc}
-                    alt="텍스트 중심 피드와 라디오 플레이어를 함께 보여주는 Focus Feed 히어로 일러스트"
-                    fill
-                    sizes="(min-width: 768px) 420px, 100vw"
-                    className="object-contain"
-                    priority
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {!selectedSource && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-(--notion-fg)/60">
-              <span className="rounded-2xl border border-(--notion-border) bg-(--notion-bg)/80 px-3 py-1.5">
-                총 {visibleItemsCount}개
-              </span>
-            </div>
+            // 글로벌 피드: 히어로 일러스트·워드마크 제거(상단 정리). 카운트만 슬림하게 노출.
+            <span className="rounded-full border border-(--notion-border) bg-(--notion-bg)/80 px-3 py-1 text-[11px] text-(--notion-fg)/60">
+              총 {visibleItemsCount}개
+            </span>
           )}
         </div>
 

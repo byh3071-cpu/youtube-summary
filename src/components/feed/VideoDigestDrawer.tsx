@@ -215,14 +215,15 @@ export default function VideoDigestDrawer({
           <button
             type="button"
             onClick={() => playAt(0)}
-            className="rounded-full bg-(--notion-fg) px-2.5 py-1 text-[11px] font-semibold text-(--notion-bg) hover:bg-(--notion-fg)/90"
+            aria-label="라디오로 듣기"
+            className="inline-flex min-h-[40px] items-center rounded-full bg-(--notion-fg) px-3 py-1.5 text-[11px] font-semibold text-(--notion-bg) hover:bg-(--notion-fg)/90"
           >
             🎧 듣기
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-(--notion-fg)/55 hover:bg-(--notion-hover) hover:text-(--notion-fg)"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-(--notion-fg)/55 hover:bg-(--notion-hover) hover:text-(--notion-fg) before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']"
             aria-label="딥다이브 닫기"
           >
             <X size={16} />
@@ -505,11 +506,14 @@ export function DeepDiveButton({
   title,
   channel,
   durationSeconds,
+  compact,
 }: {
   videoId: string;
   title: string;
   channel?: string | null;
   durationSeconds?: number | null;
+  /** 그리드 카드 액션행에서 다른 아이콘 버튼과 크기를 맞춘 원형 아이콘 전용 모드 */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -517,10 +521,16 @@ export function DeepDiveButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-(--notion-border) px-2.5 py-1 text-[11px] font-semibold text-(--notion-fg)/75 transition-colors hover:bg-(--notion-hover) hover:text-(--notion-fg)"
-        title="영상 전체 분석 — 인사이트·인용·키워드 추출"
+        className={
+          compact
+            ? "relative inline-flex h-9 w-9 items-center justify-center rounded-full text-(--notion-fg)/60 transition-colors touch-manipulation hover:bg-(--notion-hover) hover:text-(--notion-fg) before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']"
+            : "inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-(--notion-border) px-2.5 py-1 text-[11px] font-semibold text-(--notion-fg)/75 transition-colors hover:bg-(--notion-hover) hover:text-(--notion-fg)"
+        }
+        title="딥다이브 — 영상 전체 분석(인사이트·인용·키워드)"
+        aria-label="딥다이브 — 영상 전체 분석"
       >
-        <BookOpen size={12} /> <span className="hidden sm:inline">딥다이브</span>
+        <BookOpen size={compact ? 16 : 12} />
+        {!compact && <span className="hidden sm:inline">딥다이브</span>}
       </button>
       {open && (
         <VideoDigestDrawer

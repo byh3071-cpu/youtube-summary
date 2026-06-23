@@ -335,7 +335,7 @@ export default function MyFocusSection() {
             <button
               type="button"
               onClick={handleSaveGoals}
-              className="rounded-full bg-(--notion-fg) px-3 py-1.5 text-[11px] font-semibold text-(--notion-bg) transition-colors hover:bg-(--notion-fg)/90"
+              className="min-h-[44px] rounded-full bg-(--notion-fg) px-3 py-1.5 text-[11px] font-semibold text-(--notion-bg) transition-colors hover:bg-(--notion-fg)/90 sm:min-h-0"
             >
               {showSavedFlash ? "✓ 저장됨" : goalsTouched ? "관심사 저장" : "저장됨"}
             </button>
