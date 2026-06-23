@@ -70,8 +70,10 @@ export default function FeedItem({ item, bookmark, onBookmarkChange, contentStat
                         {item.source === "RSS" && (onBookmarkChange || onContentStateChange) && (
                             <span
                                 className="ml-auto flex shrink-0 items-center gap-1"
-                                onClick={(e) => e.preventDefault()}
-                                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }}
                             >
                                 {onContentStateChange && rssContentId && (
                                     <ContentStateControl

@@ -2,15 +2,18 @@
 
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import { ThemeIcon } from "@/components/ui/ThemeIcon";
+import { ICON_ACTION_BTN } from "@/lib/ui";
 
 interface Props {
   videoId: string;
   title: string;
   /** 리얼 뷰 등에서 큰 버튼 스타일용 */
   className?: string;
+  /** 그리드 카드 액션행에서 다른 아이콘 버튼과 크기를 맞춘 원형 아이콘 전용 모드 */
+  iconOnly?: boolean;
 }
 
-export default function AddToRadioButton({ videoId, title, className }: Props) {
+export default function AddToRadioButton({ videoId, title, className, iconOnly }: Props) {
   const radio = useRadioQueueOptional();
   if (!radio) return null;
 
@@ -26,6 +29,25 @@ export default function AddToRadioButton({ videoId, title, className }: Props) {
     radio.addToQueue({ videoId, title, ...(summary ? { summary } : {}) });
   };
 
+  const label = inQueue ? "이미 라디오 큐에 있음" : "라디오에 추가";
+
+  // 아이콘 전용: 같은 행의 북마크·딥다이브·더보기와 동일한 36px 원형 (UX 일관성)
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-label={label}
+        title={label}
+        className={`${ICON_ACTION_BTN} ${
+          inQueue ? "text-(--focus-accent)" : "text-(--notion-fg)/60 hover:text-(--notion-fg)"
+        }`}
+      >
+        <ThemeIcon name="Play_the_radio" alt="" size={20} />
+      </button>
+    );
+  }
+
   const base =
     "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-(--notion-border) bg-(--notion-gray)/50 font-medium text-(--notion-fg)/80 transition-colors hover:bg-(--notion-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--notion-fg)/20";
 
@@ -33,11 +55,11 @@ export default function AddToRadioButton({ videoId, title, className }: Props) {
     <button
       type="button"
       onClick={handleClick}
-      aria-label={inQueue ? "이미 라디오 큐에 있음" : "라디오에 추가"}
-      className={className ? `${base} ${className}` : `${base} px-2.5 py-1 text-[11px]`}
+      aria-label={label}
+      className={className ? `${base} ${className}` : `${base} min-h-[40px] px-2.5 py-1.5 text-[11px]`}
     >
       <ThemeIcon name="Play_the_radio" alt="라디오" size={22} />
-      {/* 모바일 2열 카드에서는 아이콘만, 데스크톱·리얼뷰에서는 라벨까지 (UX-11/12) */}
+      {/* 데스크톱·리얼뷰에서는 라벨까지 (UX-11/12) */}
       <span className={className ? "" : "hidden sm:inline"}>
         {inQueue ? "큐에 있음" : "라디오에 추가"}
       </span>

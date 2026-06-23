@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bookmark, Loader2 } from "lucide-react";
 
 interface Props {
@@ -33,6 +33,8 @@ export default function BookmarkButton({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [optimisticBookmarked, setOptimisticBookmarked] = useState(isBookmarked);
+  // 연타(이중탭) 시 setState 비동기 지연 사이로 중복 요청이 나가는 것을 동기 ref로 막는다.
+  const inFlight = useRef(false);
 
   useEffect(() => {
     setOptimisticBookmarked(isBookmarked);
@@ -41,7 +43,8 @@ export default function BookmarkButton({
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (disabled || loading) return;
+    if (disabled || loading || inFlight.current) return;
+    inFlight.current = true;
     setLoading(true);
     const prev = optimisticBookmarked;
     setOptimisticBookmarked(!prev);
@@ -81,6 +84,7 @@ export default function BookmarkButton({
       }
     } finally {
       setLoading(false);
+      inFlight.current = false;
     }
   };
 

@@ -15,6 +15,7 @@ import type { ContentStateInfo } from "@/app/actions/content-state";
 import { getWatchProgress } from "@/lib/watch-history";
 import { useRadioQueueOptional } from "@/contexts/RadioQueueContext";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
+import { HIT_AREA_44, ICON_ACTION_BTN } from "@/lib/ui";
 
 function formatTimeAgo(pubDate: string): string {
   const date = new Date(pubDate);
@@ -113,7 +114,7 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentS
   }, [baseDuration]);
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl bg-transparent px-3">
+    <article className="group flex flex-col bg-transparent px-2 sm:px-3">
       <a
         href={resumeHref ?? undefined}
         target={resumeHref ? "_blank" : undefined}
@@ -122,7 +123,7 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentS
         aria-label={`${item.sourceName} - ${item.title}`}
         tabIndex={resumeHref ? undefined : -1}
       >
-        <div className="relative w-full shrink-0 overflow-hidden bg-(--notion-gray)" style={{ aspectRatio: "16 / 9" }}>
+        <div className="relative w-full shrink-0 overflow-hidden rounded-lg bg-(--notion-gray)" style={{ aspectRatio: "16 / 9" }}>
           {item.thumbnail ? (
             <Image
               src={item.thumbnail}
@@ -160,8 +161,8 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentS
           )}
         </div>
         <div className="flex flex-1 flex-col gap-0.5 px-0 pb-1.5 pt-0.5">
-          <div className="min-h-[2.5rem] sm:min-h-[2.75rem]">
-            <h3 className="line-clamp-2 text-xs font-medium leading-snug tracking-tight text-(--notion-fg) group-hover:text-(--notion-fg)/90 sm:text-sm">
+          <div className="min-h-[2.75rem] sm:min-h-[3.25rem]">
+            <h3 className="line-clamp-2 text-sm font-medium leading-snug tracking-tight text-(--notion-fg) group-hover:text-(--notion-fg)/90 sm:text-base">
               {item.title}
             </h3>
           </div>
@@ -197,15 +198,15 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentS
         </div>
       </a>
       {item.id && (
-        <div className="flex shrink-0 items-center justify-end gap-1 px-0 pb-1 pt-0.5">
-          <div className="mr-auto">
-            <DeepDiveButton
-              videoId={item.id}
-              title={item.title}
-              channel={item.sourceName}
-              durationSeconds={item.durationSeconds ?? null}
-            />
-          </div>
+        // 액션행: 같은 36px 원형 아이콘 4개를 좌우 균등 배치(라벨은 tooltip). 모바일 2열에서도 안 잘림
+        <div className="flex shrink-0 items-center justify-between gap-1 px-0 pb-1 pt-0.5">
+          <DeepDiveButton
+            videoId={item.id}
+            title={item.title}
+            channel={item.sourceName}
+            durationSeconds={item.durationSeconds ?? null}
+            compact
+          />
           {onBookmarkChange && (
             <BookmarkButton
               videoId={item.id}
@@ -213,27 +214,27 @@ export default function YouTubeCard({ item, bookmark, onBookmarkChange, contentS
               isBookmarked={!!bookmark}
               bookmarkId={bookmark?.id ?? null}
               onBookmarkChange={onBookmarkChange}
+              className={`h-9 w-9 ${HIT_AREA_44}`}
             />
           )}
-          <AddToRadioButton videoId={item.id} title={item.title} />
+          <AddToRadioButton videoId={item.id} title={item.title} iconOnly />
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-(--notion-fg)/60 hover:bg-(--notion-hover) hover:text-(--notion-fg) touch-manipulation"
+            className={`${ICON_ACTION_BTN} text-(--notion-fg)/60 hover:text-(--notion-fg)`}
             aria-label="더보기"
+            aria-expanded={menuOpen}
+            aria-controls={`card-more-${item.id}`}
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </div>
       )}
       {item.id && (
-        <div
-          className="px-0 pb-1.5"
-          onClick={(e) => e.preventDefault()}
-        >
-          <SummarizeButton videoId={item.id} />
+        <div className="px-0 pb-1.5">
+          <SummarizeButton videoId={item.id} fullWidth />
           {menuOpen && (
-            <div className="mt-1.5 space-y-2.5 rounded-xl border border-(--notion-border) bg-(--notion-bg) px-2.5 py-2 text-xs text-(--notion-fg) shadow-sm">
+            <div id={`card-more-${item.id}`} className="mt-1.5 space-y-2.5 rounded-xl border border-(--notion-border) bg-(--notion-bg) px-2.5 py-2 text-xs text-(--notion-fg) shadow-sm">
               {onContentStateChange && (
                 <div>
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-(--notion-fg)/55 sm:text-xs">
