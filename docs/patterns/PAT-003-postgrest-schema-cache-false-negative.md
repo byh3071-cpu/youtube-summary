@@ -1,5 +1,5 @@
 ---
-id: PAT-002
+id: PAT-003
 패턴명: PostgREST 스키마캐시 staleness = 마이그레이션 직후 false negative
 카테고리: env
 증상: 방금 적용한 테이블/컬럼을 코드·검증 스크립트가 "Could not find the table 'public.X' in the schema cache" 로 실패. DB에는 분명히 존재하는데 Supabase REST(PostgREST) 가 못 찾는다. 잠시 후/재조회하면 정상. "마이그레이션 안 됨" 으로 오판하기 쉽다.

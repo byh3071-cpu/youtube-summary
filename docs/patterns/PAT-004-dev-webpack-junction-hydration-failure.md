@@ -1,5 +1,5 @@
 ---
-id: PAT-003
+id: PAT-004
 패턴명: dev 서버(webpack) + node_modules junction = 전역 hydration 실패 (런타임 검증 함정)
 카테고리: build
 증상: SSR HTML 은 정상(HTTP 200, 화면 렌더됨)인데 클릭·토글 등 모든 인터랙션이 무반응. 콘솔에 `WebSocket ... webpack-hmr ... failed: ERR_INVALID_HTTP_RESPONSE` 반복. DOM 요소에 React fiber(`__reactFiber$`/`__reactProps$`) 미부착. 특정 컴포넌트가 아니라 페이지 전체가 안 됨.
