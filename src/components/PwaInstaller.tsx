@@ -13,16 +13,15 @@ export default function PwaInstaller() {
     // 변경이 반영되지 않는 stale 문제가 생긴다. 그래서 dev 에서는 등록을 막고,
     // 이미 등록돼 있던 SW 와 캐시를 정리해 다음 로드부터 항상 최신 자산을 받게 한다.
     if (process.env.NODE_ENV !== "production") {
-      if (typeof caches !== "undefined") {
-        caches
-          .keys()
-          .then((keys) => keys.forEach((k) => caches.delete(k)))
-          .catch(() => {});
-      }
       navigator.serviceWorker
         .getRegistrations()
         .then(async (regs) => {
           await Promise.all(regs.map((r) => r.unregister()));
+          // 캐시 삭제까지 await 한 뒤 reload — reload 시점에 stale 자산이 확실히 비워져 있도록 순차 보장(SW unregister → cache 삭제 → reload).
+          if (typeof caches !== "undefined") {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+          }
           // stale SW 가 실제로 있었을 때만(regs.length > 0) 이번 세션에서 즉시 정리된 자산을 받도록 1회 강제 새로고침.
           // 무한 루프 방지: sessionStorage 플래그를 reload 전에 세팅하고, 이미 세팅돼 있으면 reload 하지 않는다.
           if (regs.length > 0 && sessionStorage.getItem("ff_dev_sw_cleaned") === null) {
