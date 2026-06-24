@@ -54,6 +54,8 @@ export function filterFeedByTrendKeyword(
 
   const tokens = phrase.split(/\s+/).filter((t) => t.length >= 2);
   // 1~2 토큰: 1개만 맞아도 / 3 토큰 이상: 2개 이상(과매칭 방지). 단 sample 매칭은 항상 통과.
+  // 2토큰 threshold 상향(>=2 ? 2 : 1)은 sample 부재 시 빈결과 회귀 → 보류.
+  // (samples=[] 이고 2토큰 중 1개씩만 맞는 아이템들만 있으면 threshold=2는 결과 0 → "빈결과 회피" 우선순위 위반. filter.test.ts가 회귀로 잠금)
   const threshold = tokens.length >= 3 ? 2 : 1;
 
   return items.filter((item) => {
