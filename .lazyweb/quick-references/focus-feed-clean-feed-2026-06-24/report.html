@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Feed 홈 — 깔끔·산뜻 발견 피드 레퍼런스</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", Roboto, sans-serif;
+    max-width: 900px; margin: 0 auto; padding: 40px 22px 80px;
+    line-height: 1.7; color: #1a1a1a; background: #fafafa;
+  }
+  h1 { font-size: 1.7rem; line-height: 1.3; margin: 0 0 6px; }
+  h2 { font-size: 1.3rem; margin: 48px 0 8px; padding-bottom: 8px; border-bottom: 2px solid #ececec; }
+  h3 { font-size: 1.06rem; margin: 34px 0 6px; color: #111; }
+  p { margin: 8px 0; }
+  .sub { color: #777; font-size: .92rem; margin-bottom: 26px; }
+  .tldr {
+    background: #eaf3ff; border: 1px solid #cfe2ff; border-radius: 12px;
+    padding: 16px 20px; margin: 22px 0 8px; font-size: 1.02rem;
+  }
+  .tldr strong { color: #0b4ea2; }
+  figure { margin: 18px 0 8px; }
+  img {
+    width: 100%; height: auto; border-radius: 12px;
+    border: 1px solid #e6e6e6; box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    background: #fff;
+  }
+  figcaption { font-size: .9rem; color: #555; margin-top: 8px; }
+  .tag { display: inline-block; font-size: .72rem; font-weight: 600; color: #0b4ea2;
+    background: #eaf3ff; border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: middle; }
+  .common { background: #f3f3f3; border-radius: 10px; padding: 10px 16px; font-size: .94rem; color: #333; margin-top: 12px; }
+  pre {
+    background: #0f1115; color: #d6dae0; border-radius: 12px; padding: 18px 16px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+    font-family: "Cascadia Code", Consolas, "D2Coding", monospace;
+  }
+  ul { padding-left: 20px; }
+  .note { background: #fff7e6; border: 1px solid #ffe2a8; border-radius: 10px; padding: 12px 16px; font-size: .95rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 620px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>Focus Feed 홈 — 깔끔·산뜻 발견 피드 + 라디오</h1>
+<div class="sub">Lazyweb Quick References · 2026-06-24 · 끌리는 인디 제품 10선</div>
+
+<div class="tldr">
+끌리는 제품들은 <strong>"잡음 없는 소스 피드(흰 배경·작은 카드) + 원클릭 Play All 라디오"</strong> 두 축으로 수렴한다.
+<code>sort.to</code>("distraction-free reader, add your favorite sources")가 Focus Feed 포지셔닝과 사실상 동일하고,
+<code>NYT Listen</code>의 "Today's Stories + Play All"이 <strong>Scan → Pick → Play</strong> 흐름을 그대로 보여준다.
+</div>
+
+<h2>Patterns — 먼저 답</h2>
+<p><strong>1. 깔끔한 소스 피드</strong> — 흰/단색 배경, 카드 1줄(작은 아바타 + 제목 + 메타), 잡음 0. 그리드(유튜브) 아니라 <strong>세로 리스트</strong>. 정렬 토글·카테고리는 상단 한 줄.</p>
+<p><strong>2. Play All 라디오 + 큐 + 미니플레이어</strong> — 상단 큰 [▶ Play All] 한 번으로 스트림 시작, 하단 고정 미니플레이어, 별도 Queue 탭.</p>
+<p><strong>3. 마찰 0 캡처</strong> — 확장/북마클릿으로 "지금 이거 저장".</p>
+<div class="common"><strong>핵심:</strong> 유튜브를 닮지 마라. 끌리는 앱들은 그리드·무한스크롤·썸네일 폭격이 아니라 <em>여백·세로 리스트·작은 단위·한 번의 큰 액션(Play All)</em>으로 차분함을 만든다 = 네가 말한 "가볍고 산뜻".</div>
+
+<h2>Pattern A — 깔끔한 소스 피드 (홈의 척추)</h2>
+
+<figure>
+  <img src="references/01-sort-distraction-free-feed.png" alt="sort.to">
+  <figcaption><b>sort.to</b> — "Your distraction-free reader. Add your favorite sources." 흰 배경 + 작은 소스 아바타 카드 세로 리스트. <b>Focus Feed 포지셔닝과 거의 동일.</b><span class="tag">Web</span></figcaption>
+</figure>
+
+<div class="grid2">
+  <figure>
+    <img src="references/02-substack-discovery-feed.png" alt="substack">
+    <figcaption><b>Substack browse</b> — 추천 포스트 세로 피드 + 카테고리 탭 + "Rising" 랭킹.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+  <figure>
+    <img src="references/08-matter-calm-inbox-feed.png" alt="matter">
+    <figcaption><b>Matter</b> — 뉴스레터 인박스 피드. 로고+헤드라인+스니펫+받은시간. 차분한 훑기 미감.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+  <figure>
+    <img src="references/03-financial-times-editorial-feed.png" alt="financial times">
+    <figcaption><b>FT The Big Read</b> — 썸네일+카테고리+날짜 세로 피드, 카드마다 북마크/팔로우.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+  <figure>
+    <img src="references/10-readwise-reader-digest.png" alt="readwise reader">
+    <figcaption><b>Readwise Reader</b> — "Daily Digest" 피드 + 저장/숏리스트/태그. 깊이 콘텐츠 미감.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+</div>
+<div class="common">공통점: <b>세로 리스트 + 작은 카드 + 여백 + 저장/팔로우가 카드에 붙음.</b> 그리드 없음.</div>
+
+<h2>Pattern B — Play All 라디오 + 큐 + 미니플레이어 (좌측 모니터용)</h2>
+
+<figure>
+  <img src="references/06-nyt-audio-play-all.png" alt="nyt listen">
+  <figcaption><b>NYT Listen</b> — "Today's Stories" 옆 <b>[▶ Play All]</b>, 히어로 카드 + 2단 카드(각 ▶·시간), 하단 탭. <b>Scan→Pick→Play 그대로.</b><span class="tag">Lazyweb</span></figcaption>
+</figure>
+
+<div class="grid2">
+  <figure>
+    <img src="references/07-neuecast-queue-miniplayer.png" alt="neuecast">
+    <figcaption><b>Neuecast</b> — Episode Queue (Queue/Saved/Recent) + 하단 고정 미니플레이어.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+  <figure>
+    <img src="references/09-apple-music-radio-cards.png" alt="apple music">
+    <figcaption><b>Apple Music 라디오</b> — 큰 프로모 카드 + ▶ + 하단 미니플레이어 바.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+</div>
+<figure>
+  <img src="references/05-overcast-clean-player.png" alt="overcast">
+  <figcaption><b>Overcast</b> — 군더더기 없는 재생 페이지(타임라인·속도·스킵). 미니멀 플레이어.<span class="tag">Web</span></figcaption>
+</figure>
+<div class="common">공통점: <b>상단 큰 Play All 1개 + 하단 고정 미니플레이어 + 별도 Queue.</b></div>
+
+<h2>Pattern C — 마찰 0 캡처</h2>
+<figure>
+  <img src="references/04-instapaper-save-capture.png" alt="instapaper">
+  <figcaption><b>Instapaper</b> — <b>크롬 확장 + 북마클릿 드래그</b>로 read-later 저장. 채널 캡처의 정석.<span class="tag">Lazyweb</span></figcaption>
+</figure>
+
+<h2 style="margin-top:60px">v2 추가 — 영상형 발견 + 숏폼/롱폼 + 라디오 플레이어바</h2>
+
+<h3>Pattern D — 영상형 발견 (큰 썸네일 피드)</h3>
+<figure>
+  <img src="references/11-buzzfeed-video-feed.png" alt="buzzfeed">
+  <figcaption><b>BuzzFeed</b> — 추천 영상 세로 피드(썸네일+제목+채널+조회수+시간) + 우측 추천. <b>유튜브보다 정돈된 영상 피드.</b><span class="tag">Lazyweb</span></figcaption>
+</figure>
+<div class="grid2">
+  <figure>
+    <img src="references/12-latimes-video-feed.png" alt="la times">
+    <figcaption><b>LA Times Video</b> — 영상 스토리 세로 피드(썸네일+카테고리+헤드라인+날짜). 에디토리얼 톤.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+  <figure>
+    <img src="references/13-cnn-video-hero.png" alt="cnn">
+    <figcaption><b>CNN Video</b> — 큰 히어로 썸네일 + ▶ + "Watch more" 사이드. 끌리는 1개 크게.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+</div>
+<div class="common">→ 롱폼 = 세로 리스트지만 <b>썸네일을 더 크게</b> (sort.to 깔끔함 + 큰 썸네일).</div>
+
+<h3>Pattern E — 숏폼/롱폼 공존</h3>
+<figure>
+  <img src="references/16-bluesky-shorts-grid.png" alt="bluesky video grid">
+  <figcaption><b>Bluesky Video 탭</b> — ⭐ <b>숏폼을 2단 그리드</b>로(썸네일+제목+핸들+♡). 풀스크린 스와이프 강제 안 함 = 깔끔.<span class="tag">Lazyweb</span></figcaption>
+</figure>
+<div class="grid2">
+  <figure>
+    <img src="references/14-youtube-shorts.png" alt="youtube shorts">
+    <figcaption><b>YouTube Shorts</b> — 풀스크린 세로 숏폼 + 하단 탭. 네가 폰에서 보는 그것.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+  <figure>
+    <img src="references/15-ig-reels.png" alt="instagram reels">
+    <figcaption><b>Instagram Reels</b> — 풀스크린 숏폼 표준. 전용 숏폼 뷰가 필요할 때.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+</div>
+<div class="common">→ <b>롱폼=세로 리스트, 숏폼=별도 그리드 행/탭</b>(Bluesky형). 섞어 폭격 ❌. 풀스크린 스와이프는 <em>원할 때만</em> 들어가는 전용 모드로.</div>
+
+<h3>Pattern F — 라디오 플레이어바 (깔끔 + 끌리게)</h3>
+<figure>
+  <img src="references/17-spotify-desktop-playerbar.png" alt="spotify desktop">
+  <figcaption><b>Spotify 데스크톱</b> — 좌측 사이드바 + 메인 캐러셀 + (하단 고정 플레이어바). 데스크톱 셸 표준.<span class="tag">Lazyweb</span></figcaption>
+</figure>
+<div class="grid2">
+  <figure>
+    <img src="references/18-radio-garden-play.png" alt="radio garden">
+    <figcaption><b>Radio Garden</b> — ⭐ 큰 [▶] 한 번에 재생 + 미니플레이어. "press play" = 0클릭 라디오.<span class="tag">Lazyweb</span></figcaption>
+  </figure>
+  <figure>
+    <img src="references/19-vinyls-now-playing.png" alt="vinyls">
+    <figcaption><b>Vinyls</b> — 회전 비닐 now-playing + 스크럽. <b>끌리는/감각적 플레이어 미감.</b><span class="tag">Lazyweb</span></figcaption>
+  </figure>
+</div>
+<div class="common">→ FF 플레이어바: <b>하단 고정 + "전체 틀기"로 채움 + vinyls급 감각.</b> 큐는 neuecast/apple-music 하단 미니바 형태.</div>
+
+<h2>Focus Feed 홈에 적용 (데스크톱 90%)</h2>
+<div class="note">피드백 반영: "오늘의 브리핑" 프레이밍 ❌ → <b>그냥 깔끔한 피드</b>. 기본 최신순 + 추천순 토글. sort.to 미감 + NYT의 Play All.</div>
+<pre>
+┌──────────────────────────────────────────────────────────┐
+│  Focus Feed        [최신순 ▾ | 추천순]   [＋ 채널]   [🔍]  │  ← 정렬 토글 + 캡처
+│                                          [ ▶ 전체 틀기 ]   │  ← Play All (라디오)
+├──────────────────────────────────────────────────────────┤
+│  ── 숏폼 (오늘) ──────────────────────────  더보기 →       │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   ← 가로 스크롤 그리드   │
+│  │  ▷  │ │  ▷  │ │  ▷  │ │  ▷  │      (Bluesky형,          │
+│  └─────┘ └─────┘ └─────┘ └─────┘       스와이프 강제 X)    │
+├──────────────────────────────────────────────────────────┤
+│  ── 롱폼 ─────────────────────────────────────             │
+│  ┌────────────┐  조코딩 · 2시간 전              [▶] [⤓]    │
+│  │  큰 썸네일  │  GPT-5.4 로 풀스택 앱 만들기               │  ← 큰 썸네일 세로 리스트
+│  └────────────┘  · AI 후크 1줄 (왜 너 취향인지)            │     (CNN·sort.to 혼합)
+│  ┌────────────┐  Fireship · 5시간 전            [▶] [⤓]    │
+│  │  큰 썸네일  │  Next.js 16 의 숨은 기능 7가지             │
+│  └────────────┘                                            │
+│  ┌────────────┐  Karpathy · 어제                [▶] [⤓]    │
+│  │  큰 썸네일  │  LLM 에이전트 깊게 파보기 (deep dive)      │  ← 깊이/인사이트 강조
+│  └────────────┘                                            │
+│              · · ·  오늘치 끝. 일하러 가셈 ✓  · · ·         │  ← 유한 (안티 무한스크롤)
+└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ ◯ 조코딩 — GPT-5.4…   ◀◀  ▶  ▶▶    ──●─────  12:30 │ ♡ ✕ │  ← 하단 고정 플레이어바
+└──────────────────────────────────────────────────────────┘   (vinyls급 감각 + 큐)
+</pre>
+<ul>
+  <li>[▶] = 라디오 큐 담기 / 바로 재생 · [⤓] = (Phase 2) 아이디어뱅크로 보내기</li>
+  <li>정렬 토글 = "올라온 거대로(최신순)" + "추천순(취향 랭킹)" — 네가 둘 다 원한 거</li>
+  <li>[▶ 전체 틀기] = NYT Play All = 좌측 모니터 1클릭 BGM</li>
+</ul>
+
+<h2>Next</h2>
+<ul>
+  <li>이 레퍼런스로 시안(목업) 확정 → 스펙 작성</li>
+  <li>더 깊은 경쟁 분석: <code>/lazyweb-design-research</code></li>
+  <li>영상형 발견(큰 썸네일) 레퍼런스 더 필요하면 추가 검색</li>
+</ul>
+
+</body>
+</html>
